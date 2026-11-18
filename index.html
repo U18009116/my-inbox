@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>My Inbox</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#f2f2f7;--card:#fff;--text:#000;--sub:#6e6e73;--line:rgba(60,60,67,.18);--blue:#007aff;--green:#34c759;--orange:#ff9500;--red:#ff3b30;--purple:#af52de;--teal:#30b0c7;--gray:#8e8e93;--fill:rgba(120,120,128,.12)}
+@media (prefers-color-scheme:dark){:root{--bg:#000;--card:#1c1c1e;--text:#fff;--sub:#98989f;--line:rgba(84,84,88,.6);--blue:#0a84ff;--green:#30d158;--orange:#ff9f0a;--red:#ff453a;--purple:#bf5af2;--teal:#40c8e0;--gray:#8e8e93;--fill:rgba(120,120,128,.24)}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.wrap{max-width:680px;margin:0 auto;padding:12px 16px calc(40px + env(safe-area-inset-bottom))}
+header{padding:20px 4px 8px}
+.date{color:var(--sub);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+h1{font-size:34px;line-height:1.1;margin:2px 0 0;font-weight:700;letter-spacing:-.02em}
+h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
+.card{background:var(--card);border-radius:14px;overflow:hidden}
+.muted{color:var(--sub)}
+.small{font-size:13px}
+.search{display:flex;gap:8px;align-items:center;background:var(--fill);border-radius:12px;padding:9px 12px;margin-top:12px}
+.search input{flex:1;border:0;background:none;color:var(--text);font:inherit;outline:none;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--blue);color:#fff;border-radius:12px;padding:12px 18px;font-weight:600}
+.btn.ghost{background:var(--fill);color:var(--blue)}
+.row{display:flex;gap:12px;padding:12px 14px;align-items:flex-start;position:relative;width:100%;text-align:left}
+.row+.row{border-top:.5px solid var(--line)}
+.av{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:15px}
+.main{flex:1;min-width:0}
+.line1{display:flex;gap:8px;justify-content:space-between}
+.from{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.time{color:var(--sub);font-size:13px;flex:none}
+.subj{margin:1px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.prev{margin:2px 0 0;color:var(--sub);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.dot{position:absolute;left:4px;top:26px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+.acts{display:flex;flex-direction:column;gap:6px}
+.fb{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--fill);color:var(--sub);font-size:16px}
+.fb[aria-pressed=true].star{background:var(--orange);color:#fff}
+.fb[aria-pressed=true].down{background:var(--gray);color:#fff}
+.seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin:0 0 10px;overflow-x:auto}
+.seg button{flex:1;padding:6px 8px;border-radius:7px;font-size:13px;font-weight:600;white-space:nowrap}
+.seg button[aria-pressed=true]{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.cal{flex:none;width:44px;border-radius:10px;overflow:hidden;text-align:center;background:var(--fill)}
+.cal b{display:block;background:var(--red);color:#fff;font-size:10px;padding:2px 0;text-transform:uppercase}
+.cal span{display:block;font-size:19px;font-weight:600;padding:2px 0 3px}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;color:#fff;margin-top:5px}
+.empty{padding:22px 14px;text-align:center;color:var(--sub)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--card);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:24px}
+.center{min-height:70vh;display:grid;place-items:center;text-align:center}
+.center p{max-width:320px;margin:10px auto 22px;color:var(--sub)}
+/* reader */
+#reader{position:fixed;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column}
+#reader.open{display:flex}
+.bar{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:var(--card);border-bottom:.5px solid var(--line)}
+.bar .t{flex:1;font-weight:600;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar button{color:var(--blue);font-size:17px;padding:4px 6px;min-width:60px}
+.scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
+.msg{background:var(--card);margin:12px;border-radius:14px;padding:14px}
+.msg h3{margin:0 0 4px;font-size:19px}
+.msg .meta{color:var(--sub);font-size:13px;margin-bottom:10px}
+.msg iframe{width:100%;border:0;background:#fff;border-radius:8px;min-height:120px}
+.msg pre{white-space:pre-wrap;word-wrap:break-word;font:inherit;margin:0}
+.atts{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.att{display:flex;align-items:center;gap:8px;background:var(--fill);border-radius:10px;padding:9px 12px;font-size:14px;font-weight:600;max-width:100%}
+.att span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pdf canvas{display:block;width:100%;margin:0 0 8px;background:#fff}
+#pdf{padding:10px}
+.spin{width:22px;height:22px;border:3px solid var(--fill);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;margin:30px auto}
+@keyframes s{to{transform:rotate(360deg)}}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,30,30,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;display:none;max-width:90vw}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="center"><div class="spin"></div></div></div>
+
+<div id="reader" role="dialog" aria-modal="true">
+  <div class="bar"><button id="r-back">‹ Back</button><div class="t" id="r-title"></div><button id="r-extra" style="visibility:hidden">Share</button></div>
+  <div class="scroll" id="r-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ---- Settings (no secrets here: a Google "client ID" is public by design) ----
+const CLIENT_ID = '177429821917-kcu5ejvtcvkhjt1cufv1imslthtv7mj2.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
+const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
+const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
+
+if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const S = { token: null, exp: 0, data: null, feedback: {}, fbFileId: null, kind: 'all', results: null, query: '' };
+let tokenClient, tokenWait = null;
+
+function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => (t.style.display = 'none'), ms); }
+
+// ---------- Google sign-in ----------
+function initAuth() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES, login_hint: localStorageGet('hint') || undefined,
+    callback: (r) => {
+      const w = tokenWait; tokenWait = null;
+      if (r && r.access_token) { S.token = r.access_token; S.exp = Date.now() + (r.expires_in - 60) * 1000; localStorageSet('signedin', '1'); w && w.res(); }
+      else w && w.rej(new Error((r && r.error) || 'sign-in failed'));
+    },
+    error_callback: (e) => { const w = tokenWait; tokenWait = null; w && w.rej(new Error(e && e.type || 'popup closed')); }
+  });
+}
+function getToken(interactive) {
+  if (S.token && Date.now() < S.exp) return Promise.resolve();
+  return new Promise((res, rej) => { tokenWait = { res, rej }; tokenClient.requestAccessToken({ prompt: interactive ? '' : 'none' }); });
+}
+function localStorageGet(k) { try { return localStorage.getItem('mi_' + k); } catch (e) { return null; } }
+function localStorageSet(k, v) { try { localStorage.setItem('mi_' + k, v); } catch (e) {} }
+
+async function api(url, opts = {}) {
+  await getToken(true);
+  const r = await fetch(url, { ...opts, headers: { Authorization: 'Bearer ' + S.token, ...(opts.headers || {}) } });
+  if (r.status === 401) { S.token = null; await getToken(true); return api(url, opts); }
+  if (!r.ok) throw new Error('Google said ' + r.status);
+  return r;
+}
+const G = 'https://gmail.googleapis.com/gmail/v1/users/me/';
+const gmail = async (path, opts) => (await api(G + path, opts)).json();
+
+// ---------- Drive: agent data + feedback ----------
+async function driveFind(name) {
+  const q = encodeURIComponent(`name='${name}' and trashed=false`);
+  const r = await (await api(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=modifiedTime desc&fields=files(id,modifiedTime)&pageSize=1`)).json();
+  return r.files && r.files[0];
+}
+async function driveRead(id) { return (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json(); }
+async function loadData() {
+  try { const f = await driveFind(DATA_FILE); S.data = f ? await driveRead(f.id) : null; } catch (e) { S.data = null; }
+  try { const f = await driveFind(FEEDBACK_FILE); if (f) { S.fbFileId = f.id; S.feedback = await driveRead(f.id) || {}; } } catch (e) {}
+}
+async function saveFeedback() {
+  const body = JSON.stringify(S.feedback);
+  if (S.fbFileId) {
+    await api(`https://www.googleapis.com/upload/drive/v3/files/${S.fbFileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
+  } else {
+    const meta = { name: FEEDBACK_FILE, mimeType: 'application/json' };
+    const fd = new FormData();
+    fd.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+    fd.append('file', new Blob([body], { type: 'application/json' }));
+    const r = await (await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: fd })).json();
+    S.fbFileId = r.id;
+  }
+}
+
+// ---------- helpers ----------
+const COLORS = ['#ff9500', '#34c759', '#007aff', '#af52de', '#ff2d55', '#5856d6', '#30b0c7', '#a2845e'];
+function avatar(name) { const n = String(name || '?').replace(/["<].*$/, '').trim() || '?'; const a = el('div', 'av', n[0].toUpperCase()); let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) | 0; a.style.background = COLORS[Math.abs(h) % COLORS.length]; return a; }
+const hdr = (m, name) => ((m.payload && m.payload.headers) || []).find((h) => h.name.toLowerCase() === name)?.value || '';
+const nameOf = (from) => (from.match(/^\s*"?([^"<]+?)"?\s*</) || [, from])[1].trim();
+function when(ms) { const d = new Date(+ms), now = new Date(); if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const y = new Date(now); y.setDate(now.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'Yesterday'; return d.toLocaleDateString([], { day: 'numeric', month: 'short' }); }
+function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+const utf8 = (s) => new TextDecoder().decode(b64(s));
+function decodeEntities(s) { const t = document.createElement('textarea'); t.innerHTML = s || ''; return t.value; }
+
+// ---------- screens ----------
+function signInScreen(msg) {
+  const app = $('app'); app.replaceChildren();
+  const c = el('div', 'center'); const box = el('div');
+  box.append(el('div', '', '📬'), el('h1', '', 'My Inbox'), el('p', '', msg || 'Sign in with your Google account to see your important emails and open attachments instantly.'));
+  const b = el('button', 'btn', 'Sign in with Google');
+  b.onclick = async () => { try { await getToken(true); await start(); } catch (e) { toast('Sign-in didn\'t finish. Try again.'); } };
+  box.append(b); c.append(box); app.append(c);
+  box.firstChild.style.fontSize = '56px';
+}
+
+async function start() {
+  const app = $('app'); app.replaceChildren(el('div', 'center')); app.firstChild.append(el('div', 'spin'));
+  await loadData();
+  render();
+}
+
+function render() {
+  const app = $('app'); app.replaceChildren();
+  const d = S.data || {}; const m = d.morning || {};
+  const head = el('header');
+  head.append(el('div', 'date', new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })), el('h1', '', 'My Inbox'));
+  const form = el('form', 'search'); const inp = el('input'); inp.type = 'search'; inp.placeholder = 'Search: e.g. graduation certificate'; inp.value = S.query; inp.enterKeyHint = 'search';
+  form.append(el('span', 'muted', '🔍'), inp); form.onsubmit = (e) => { e.preventDefault(); search(inp.value.trim()); inp.blur(); };
+  head.append(form); app.append(head);
+
+  if (S.results) { app.append(resultsSection()); return; }
+
+  // Refresh row
+  const rr = el('div'); rr.style.cssText = 'display:flex;gap:10px;align-items:center;margin:14px 4px 0';
+  const rb = el('button', 'btn ghost', '↻ Check new mail'); rb.onclick = liveCheck;
+  rr.append(rb, el('span', 'muted small', d.updated_at ? 'Agent ran ' + when(Date.parse(d.updated_at)) : ''));
+  app.append(rr);
+
+  // Trackers
+  const trackers = Array.isArray(d.trackers) ? d.trackers : [];
+  if (trackers.length) app.append(trackerSection(trackers));
+
+  // Important
+  app.append(el('h2', '', 'Important'));
+  const emails = Array.isArray(m.emails) ? m.emails : [];
+  const card = el('div', 'card');
+  if (S.live) S.live.forEach((x) => card.append(emailRow(x)));
+  else if (emails.length) emails.forEach((x) => card.append(emailRow({ id: x.id || x.thread_id, from: x.from || x.from_email, title: x.title, preview: x.preview || x.detail, time: x.time, from_email: x.from_email })));
+  else card.append(el('div', 'empty', S.data ? 'All clear ✨' : 'No summary from the 7am agent yet. Tap "Check new mail" to see your inbox.'));
+  app.append(card);
+
+  // Drafts
+  const drafts = Array.isArray(m.drafts) ? m.drafts : [];
+  if (drafts.length) {
+    app.append(el('h2', '', 'Drafts waiting for you'));
+    const dc = el('div', 'card');
+    drafts.forEach((x) => { const r = el('a', 'row'); r.href = 'https://mail.google.com/mail/u/0/#drafts'; r.style.color = 'inherit'; r.style.textDecoration = 'none'; const mm = el('div', 'main'); mm.append(el('div', 'from', x.to || x.title || 'Draft'), el('p', 'prev', x.preview || x.summary || '')); r.append(el('div', 'av', '✎'), mm); r.firstChild.style.background = 'var(--gray)'; dc.append(r); });
+    app.append(dc);
+  }
+
+  // Clean-up stats
+  const st = m.stats || m.cleanup || null;
+  if (st) {
+    app.append(el('h2', '', 'Cleaned up'));
+    const g = el('div', 'stats');
+    [['Archived', st.archived], ['Unsubscribed', st.unsubscribed], ['Spam', st.spam]].forEach(([k, v]) => { const s = el('div', 'stat'); s.append(el('b', '', String(v ?? 0)), el('span', 'muted small', k)); g.append(s); });
+    app.append(g);
+  }
+}
+
+const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries'], ticket: ['🎟️', 'var(--purple)', 'Tickets'], meeting: ['👥', 'var(--blue)', 'Meetings'], bill: ['🧾', 'var(--red)', 'Bills'], booking: ['🧳', 'var(--teal)', 'Tickets'] };
+const groupOf = (k) => (k === 'booking' ? 'ticket' : k);
+function trackerSection(list) {
+  const sec = el('section'); sec.append(el('h2', '', 'Trackers'));
+  const open = list.filter((t) => !['delivered', 'paid', 'cancelled'].includes(t.status) || (t.date && new Date(t.date) >= new Date(Date.now() - 864e5)));
+  const seg = el('div', 'seg');
+  [['all', 'All'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
+    const n = k === 'all' ? open.length : open.filter((t) => groupOf(t.kind) === k).length;
+    const b = el('button', '', label + (n ? ' ' + n : '')); b.setAttribute('aria-pressed', String(S.kind === k)); b.onclick = () => { S.kind = k; render(); }; seg.append(b);
+  });
+  sec.append(seg);
+  const card = el('div', 'card');
+  const shown = open.filter((t) => S.kind === 'all' || groupOf(t.kind) === S.kind);
+  if (!shown.length) card.append(el('div', 'empty', 'Nothing here'));
+  shown.forEach((t) => {
+    const k = KINDS[t.kind] || KINDS.delivery;
+    const r = el('button', 'row');
+    let lead;
+    if (t.date && !isNaN(new Date(t.date))) { const dt = new Date(t.date); lead = el('div', 'cal'); lead.append(el('b', '', dt.toLocaleDateString([], { month: 'short' })), el('span', '', String(dt.getDate()))); }
+    else { lead = el('div', 'av', k[0]); lead.style.background = k[1]; }
+    const mm = el('div', 'main'); mm.append(el('div', 'from', t.title || k[2]));
+    const meta = [t.from, t.time, t.place, t.ref].filter(Boolean).join(' · '); if (meta) mm.append(el('p', 'prev', meta));
+    if (t.status) { const p = el('span', 'pill', String(t.status).replace(/_/g, ' ')); p.style.background = k[1]; mm.append(p); }
+    r.append(lead, mm);
+    const tid = t.thread_id || t.threadId; if (tid) r.onclick = () => openThread(tid, t.title);
+    card.append(r);
+  });
+  sec.append(card); return sec;
+}
+
+function emailRow(x) {
+  const r = el('div', 'row');
+  if (x.unread) r.append(el('span', 'dot'));
+  const mm = el('button', 'main'); mm.style.textAlign = 'left';
+  const l1 = el('div', 'line1'); l1.append(el('span', 'from', nameOf(x.from || 'Unknown')), el('span', 'time', x.time || ''));
+  mm.append(l1, el('p', 'subj', x.title || '(no subject)'));
+  if (x.preview) mm.append(el('p', 'prev', x.preview));
+  if (x.atts) mm.append(el('p', 'prev', '📎 ' + x.atts));
+  mm.onclick = () => openThread(x.id, x.title);
+  const acts = el('div', 'acts');
+  const key = x.id; const fb = S.feedback[key] && S.feedback[key].verdict;
+  const star = el('button', 'fb star', '★'); star.title = 'Always important'; star.setAttribute('aria-pressed', String(fb === 'important'));
+  const down = el('button', 'fb down', '👎'); down.title = 'Not important'; down.setAttribute('aria-pressed', String(fb === 'not_important'));
+  const set = async (v) => {
+    if (S.feedback[key] && S.feedback[key].verdict === v) delete S.feedback[key];
+    else S.feedback[key] = { verdict: v, thread_id: key, from: x.from || '', from_email: x.from_email || '', title: x.title || '', at: new Date().toISOString(), processed: false };
+    star.setAttribute('aria-pressed', String(S.feedback[key]?.verdict === 'important')); down.setAttribute('aria-pressed', String(S.feedback[key]?.verdict === 'not_important'));
+    try { await saveFeedback(); toast(S.feedback[key] ? 'Got it. The agent will learn this at 7am.' : 'Removed'); } catch (e) { toast('Couldn\'t save. Check your connection.'); }
+  };
+  star.onclick = () => set('important'); down.onclick = () => set('not_important');
+  acts.append(star, down);
+  r.append(avatar(x.from), mm, acts);
+  return r;
+}
+
+// ---------- Live Gmail ----------
+async function listThreads(q, max = 20) {
+  const r = await gmail(`threads?maxResults=${max}&q=${encodeURIComponent(q)}`);
+  const ts = r.threads || [];
+  return Promise.all(ts.map(async (t) => {
+    const th = await gmail(`threads/${t.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`);
+    const last = th.messages[th.messages.length - 1];
+    const atts = [];
+    return { id: t.id, from: hdr(last, 'from'), title: hdr(last, 'subject'), preview: decodeEntities(last.snippet), time: when(last.internalDate), unread: th.messages.some((m) => (m.labelIds || []).includes('UNREAD')), atts: atts.join(', ') };
+  }));
+}
+async function liveCheck() {
+  toast('Checking Gmail…', 1500);
+  try { S.live = await listThreads('in:inbox -category:promotions -category:social newer_than:3d', 25); render(); if (!S.live.length) toast('Nothing new in the last 3 days'); }
+  catch (e) { toast('Couldn\'t reach Gmail: ' + e.message); }
+}
+async function search(q) {
+  S.query = q; if (!q) { S.results = null; render(); return; }
+  S.results = 'loading'; render();
+  // Plain words work; words like "certificate", "pdf", "invoice" also look inside attachments.
+  let gq = q.replace(/^(go\s+)?(fetch|find|get|show|search( for)?|open)\s+(me\s+)?(my\s+)?/i, '');
+  if (/\b(pdf|certificate|invoice|statement|ticket|document|attachment|file)s?\b/i.test(gq)) gq += ' has:attachment';
+  try { S.results = await listThreads(gq, 20); if (!S.results.length) S.results = await listThreads(q, 20); }
+  catch (e) { S.results = []; toast('Search failed: ' + e.message); }
+  render();
+}
+function resultsSection() {
+  const sec = el('section');
+  const top = el('div'); top.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+  top.append(el('h2', '', 'Results'));
+  const back = el('button', '', 'Done'); back.style.cssText = 'color:var(--blue);font-weight:600;margin-top:16px'; back.onclick = () => { S.results = null; S.query = ''; render(); };
+  top.append(back); sec.append(top);
+  const card = el('div', 'card');
+  if (S.results === 'loading') card.append(el('div', 'spin'));
+  else if (!S.results.length) card.append(el('div', 'empty', 'Nothing found. Try other words.'));
+  else S.results.forEach((x) => card.append(emailRow(x)));
+  sec.append(card); return sec;
+}
+
+// ---------- Reader ----------
+function walk(part, out) {
+  if (!part) return;
+  const mt = part.mimeType || '';
+  if (part.filename && part.body && (part.body.attachmentId || part.body.data)) out.atts.push({ name: part.filename, mime: mt, id: part.body.attachmentId, data: part.body.data, size: part.body.size, inline: /inline/i.test((part.headers || []).find((h) => h.name.toLowerCase() === 'content-disposition')?.value || '') });
+  else if (mt === 'text/html' && part.body && part.body.data) out.html = out.html || utf8(part.body.data);
+  else if (mt === 'text/plain' && part.body && part.body.data) out.text = out.text || utf8(part.body.data);
+  (part.parts || []).forEach((p) => walk(p, out));
+}
+function openReader(title) { $('r-title').textContent = title || ''; $('r-extra').style.visibility = 'hidden'; $('reader').classList.add('open'); history.pushState({ r: 1 }, ''); }
+function closeReader() { $('reader').classList.remove('open'); $('r-body').replaceChildren(); }
+$('r-back').onclick = () => history.back();
+window.addEventListener('popstate', () => { if ($('pdf')) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
+
+async function openThread(id, title) { openReader(title); await showThread(id, title); }
+async function showThread(id, title) {
+  showThread._last = [id, title];
+  $('r-title').textContent = title || ''; $('r-extra').style.visibility = 'hidden';
+  const body = $('r-body'); body.replaceChildren(el('div', 'spin'));
+  try {
+    const th = await gmail(`threads/${id}?format=full`);
+    body.replaceChildren();
+    const unread = th.messages.filter((m) => (m.labelIds || []).includes('UNREAD')).length;
+    th.messages.forEach((m) => {
+      const out = { atts: [] }; walk(m.payload, out);
+      const box = el('div', 'msg');
+      box.append(el('h3', '', hdr(m, 'subject') || '(no subject)'), el('div', 'meta', nameOf(hdr(m, 'from')) + ' · ' + new Date(+m.internalDate).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })));
+      if (out.html) {
+        const f = el('iframe'); f.setAttribute('sandbox', 'allow-popups allow-popups-to-escape-sandbox'); f.setAttribute('referrerpolicy', 'no-referrer');
+        f.srcdoc = '<base target="_blank"><meta name="viewport" content="width=device-width"><style>body{margin:8px;font:15px -apple-system,Roboto,sans-serif;color:#111;word-wrap:break-word}img{max-width:100%;height:auto}table{max-width:100%!important}</style>' + out.html;
+        f.onload = () => { try { f.style.height = (f.contentDocument.documentElement.scrollHeight + 20) + 'px'; } catch (e) { f.style.height = '70vh'; } };
+        box.append(f);
+      } else box.append(el('pre', '', out.text || decodeEntities(m.snippet)));
+      const files = out.atts.filter((a) => !(a.inline && /^image\//.test(a.mime)));
+      if (files.length) {
+        const at = el('div', 'atts');
+        files.forEach((a) => { const b = el('button', 'att'); b.append(el('b', '', /pdf/i.test(a.mime) ? '📄' : /^image/.test(a.mime) ? '🖼️' : '📎'), el('span', '', a.name)); b.onclick = () => openAttachment(m.id, a); at.append(b); });
+        box.append(at);
+      }
+      body.append(box);
+    });
+    if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).catch(() => {});
+    const g = el('a', 'btn ghost', 'Open in Gmail'); g.href = 'https://mail.google.com/mail/u/0/#all/' + id; g.target = '_blank'; g.style.cssText = 'margin:4px 12px 30px;display:flex;text-decoration:none';
+    body.append(g);
+  } catch (e) { body.replaceChildren(el('div', 'empty', 'Couldn\'t open this email: ' + e.message)); }
+}
+
+async function openAttachment(msgId, a) {
+  $('r-title').textContent = a.name;
+  const body = $('r-body'); body.replaceChildren(el('div', 'spin'));
+  try {
+    const data = a.id ? (await gmail(`messages/${msgId}/attachments/${a.id}`)).data : a.data;
+    const bytes = b64(data);
+    const blob = new Blob([bytes], { type: a.mime || 'application/octet-stream' });
+    const file = new File([blob], a.name, { type: blob.type });
+    const ex = $('r-extra'); ex.style.visibility = 'visible';
+    ex.onclick = async () => {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: a.name }); } catch (e) {} }
+      else { const u = URL.createObjectURL(blob); const l = el('a'); l.href = u; l.download = a.name; l.click(); setTimeout(() => URL.revokeObjectURL(u), 6e4); }
+    };
+    body.replaceChildren();
+    if (/pdf/i.test(a.mime) || /\.pdf$/i.test(a.name)) {
+      const box = el('div'); box.id = 'pdf'; body.append(box);
+      const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
+      const w = Math.min(body.clientWidth - 20, 900), dpr = window.devicePixelRatio || 1;
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const p = await pdf.getPage(i); const v0 = p.getViewport({ scale: 1 }); const v = p.getViewport({ scale: (w / v0.width) * dpr });
+        const c = el('canvas'); c.width = v.width; c.height = v.height; c.style.width = w + 'px'; box.append(c);
+        await p.render({ canvasContext: c.getContext('2d'), viewport: v }).promise;
+      }
+    } else if (/^image\//.test(a.mime)) {
+      const img = el('img'); img.src = URL.createObjectURL(blob); img.style.cssText = 'max-width:100%;display:block;margin:12px auto'; body.append(img);
+    } else {
+      const box = el('div', 'msg'); box.append(el('p', '', 'This file type can\'t be shown here. Tap Share to open it in another app.'));
+      body.append(box);
+    }
+  } catch (e) { body.replaceChildren(el('div', 'empty', 'Couldn\'t open the file: ' + e.message)); }
+}
+
+// ---------- boot ----------
+window.addEventListener('load', () => {
+  if (CLIENT_ID.startsWith('__')) { signInScreen('This app is still being set up.'); return; }
+  const wait = setInterval(async () => {
+    if (!window.google || !google.accounts) return;
+    clearInterval(wait); initAuth();
+    if (localStorageGet('signedin')) { try { await getToken(false); await start(); return; } catch (e) {} }
+    signInScreen();
+  }, 100);
+});
+</script>
+</body>
+</html>
