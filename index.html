@@ -157,7 +157,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 21;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 22;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -333,6 +333,8 @@ async function start() {
   const app = $('app'); app.replaceChildren(loader());
   await loadData();
   render();
+  // Notifications allowed but the phone's address never got saved (e.g. sign-in interrupted it): finish quietly now
+  if ('PushManager' in window && 'Notification' in window && Notification.permission === 'granted' && localStorageGet('push') !== '1') enablePush(null);
 }
 
 // Bottom tab bar: Inbox, Trackers, Search, Cleaned up
