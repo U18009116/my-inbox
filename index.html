@@ -8,11 +8,11 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,600;1,800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
 <style>
 /* "Fight night" look: pure black, condensed heavy type, one red for what needs you, square corners */
-:root{--bg:#000;--card:#151515;--fill:#232323;--line:#2b2b2b;--text:#fff;--sub:#a3a3a3;--red:#ff4b3e;--green:#2fd16f;--orange:#ff9f1c;--blue:#4fc3f7;--purple:#b388ff;--teal:#4dd0e1;--gray:#6b6b6b;--r:2px;
---head:'Barlow Condensed',Impact,'Arial Narrow',sans-serif;--body:'Barlow',-apple-system,Roboto,'Segoe UI',sans-serif}
+:root{--bg:#000;--card:#151515;--fill:#232323;--line:#2b2b2b;--text:#fff;--sub:#a3a3a3;--red:#ff4b3e;--green:#2fd16f;--orange:#ff9f1c;--blue:#4fc3f7;--purple:#b388ff;--teal:#4dd0e1;--gray:#6b6b6b;--r:8px;
+--head:-apple-system,BlinkMacSystemFont,'SF Pro Display',Inter,system-ui,sans-serif;--body:-apple-system,BlinkMacSystemFont,'SF Pro Text',Inter,system-ui,sans-serif}
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 var(--body);-webkit-font-smoothing:antialiased;overscroll-behavior-y:contain}
 button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
@@ -20,17 +20,17 @@ button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(-
 .wrap{max-width:680px;margin:0 auto;padding:0 16px calc(96px + env(safe-area-inset-bottom))}
 .topbar{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;margin:0 -16px;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;background:var(--bg);border-bottom:1px solid var(--line)}
 .tb-date{color:var(--sub);font-size:13px}
-.brand{font:italic 800 27px/1 var(--head);text-transform:uppercase;letter-spacing:-.01em}
+.brand{font:italic 800 21px/1 var(--head);text-transform:uppercase;letter-spacing:-.02em}
 .livepill{justify-self:end;background:var(--red);color:#fff;font:600 13px/1 var(--body);padding:7px 10px;border-radius:var(--r)}
 .livepill.quiet{background:var(--fill);color:var(--sub)}
 h1{font:italic 800 42px/1 var(--head);text-transform:uppercase;margin:6px 0 0}
-h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
+h2{font:800 21px/1.15 var(--head);text-transform:uppercase;letter-spacing:-.01em;margin:28px 0 10px}
 .hint{color:var(--sub);font-size:14px;margin:14px 0 0}
 .muted{color:var(--sub)}.small{font-size:13px}
 /* the one bold thing: your next event or delivery */
 .feature{display:block;width:100%;text-align:left;margin-top:16px;padding:20px 18px 18px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--k,var(--red));border-radius:var(--r);position:relative}
 .f-kicker{display:block;color:var(--sub);font-size:14px;font-style:italic}
-.f-title{display:block;font:italic 800 clamp(40px,12vw,66px)/.92 var(--head);text-transform:uppercase;margin:10px 0 14px;overflow-wrap:anywhere}
+.f-title{display:block;font:italic 800 clamp(30px,9vw,48px)/1.02 var(--head);letter-spacing:-.02em;text-transform:uppercase;margin:10px 0 14px;overflow-wrap:anywhere}
 .f-when{display:block;font-weight:600}
 .f-sub{display:block;color:var(--sub);font-size:14px;margin-top:2px}
 .f-count{position:absolute;top:16px;right:16px;background:var(--red);color:#fff;font:600 12px/1 var(--body);padding:6px 8px;border-radius:var(--r)}
@@ -40,11 +40,14 @@ h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
 .av{flex:none;width:40px;height:40px;border-radius:var(--r);display:grid;place-items:center;color:#fff;font:800 19px/1 var(--head)}
 .main{flex:1;min-width:0}
 .line1{display:flex;gap:8px;justify-content:space-between;align-items:baseline}
-.from{font:700 19px/1.15 var(--head);text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.from{font:700 15px/1.25 var(--head);letter-spacing:.01em;text-transform:uppercase;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .time{color:var(--sub);font-size:13px;flex:none}
 .subj{margin:3px 0 0;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .prev{margin:3px 0 0;color:var(--sub);font-size:14px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .dot{position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
+/* read emails fade back; unread ones stay bright white */
+.row.read .from,.row.read .subj{color:var(--sub)}.row.read .prev{color:#6f6f6f}.row.read .av{opacity:.45}
+.tcard.read .tname,.tcard.read .tsub{color:var(--sub)}.tcard.read .tdate{opacity:.5}
 .empty{padding:22px 16px;color:var(--sub)}
 .sec-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin:28px 0 10px;text-align:left}
 .sec-head h2{margin:0}
@@ -58,18 +61,18 @@ h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
 .tlist{display:grid;gap:10px}
 .tcard{display:flex;align-items:stretch;gap:14px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:10px;position:relative}
 .tdate{flex:none;width:76px;min-height:76px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--fill);border-top:3px solid var(--k,var(--red));border-radius:var(--r)}
-.tdate b{font:800 36px/1 var(--head)}
+.tdate b{font:800 30px/1 var(--head);letter-spacing:-.02em}
 .tdate span{color:var(--sub);font-size:13px;margin-top:2px}
 .tbody{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;padding-right:30px}
 .tstatus{color:var(--sub);font-size:13px}
-.tname{font:800 22px/1.05 var(--head);text-transform:uppercase;margin:2px 0}
+.tname{font:800 17px/1.2 var(--head);letter-spacing:-.01em;text-transform:uppercase;margin:2px 0}
 .tsub{font-size:15px}
 .tmeta{color:var(--sub);font-size:13px}
 .go{position:absolute;right:10px;bottom:10px;width:24px;height:24px;display:grid;place-items:center;background:var(--red);color:#fff;font-weight:700;border-radius:var(--r);line-height:1}
 .pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:var(--r);color:#fff;margin-top:5px}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 12px}
-.stat b{display:block;font:800 42px/1 var(--head)}
+.stat b{display:block;font:800 34px/1 var(--head);letter-spacing:-.02em}
 .search{display:flex;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
 .search input{flex:1;border:0;background:none;color:var(--text);font:inherit;outline:none;min-width:0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--red);color:#fff;border-radius:var(--r);padding:13px 18px;font-weight:600}
@@ -86,11 +89,11 @@ h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
 #reader{position:fixed;inset:0;background:var(--bg);z-index:10;display:none;flex-direction:column}
 #reader.open{display:flex}
 .bar{display:flex;align-items:center;gap:8px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;background:#000;border-bottom:1px solid var(--line)}
-.bar .t{flex:1;font:700 19px/1.2 var(--head);text-transform:uppercase;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .t{flex:1;font:700 16px/1.2 var(--head);text-transform:uppercase;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar button{color:var(--red);font-size:16px;font-weight:600;padding:4px 6px;min-width:64px}
 .scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch}
 .msg{background:var(--card);border:1px solid var(--line);margin:12px;border-radius:var(--r);padding:16px}
-.msg h3{margin:0 0 4px;font:800 25px/1.08 var(--head);text-transform:uppercase}
+.msg h3{margin:0 0 4px;font:800 20px/1.2 var(--head);letter-spacing:-.01em;text-transform:uppercase}
 .msg .meta{color:var(--sub);font-size:13px;margin-bottom:12px}
 .msg iframe{width:100%;border:0;background:#fff;border-radius:var(--r);min-height:120px}
 .msg pre{white-space:pre-wrap;word-wrap:break-word;font:inherit;margin:0}
@@ -107,7 +110,7 @@ h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
 .fb[aria-pressed=true].cross{background:var(--red);color:#fff}
 .imp{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 2px;border-top:1px solid var(--line)}
 .imp .fb{flex:none;width:36px;height:36px;font-size:17px}
-.imp-tx{display:flex;flex-direction:column;gap:1px}.imp-tx b{font:700 19px/1.1 var(--head);text-transform:uppercase}.imp-tx small{color:var(--sub);font-size:13px;line-height:1.3}
+.imp-tx{display:flex;flex-direction:column;gap:1px}.imp-tx b{font:700 15px/1.25 var(--head);text-transform:uppercase}.imp-tx small{color:var(--sub);font-size:13px;line-height:1.3}
 /* opening animation: an envelope opens and a letter slides out */
 .mail-anim{position:relative;width:120px;height:124px;margin:0 auto;perspective:500px}
 .m-back{position:absolute;left:0;bottom:0;width:120px;height:78px;background:#a8231b;border-radius:var(--r);z-index:1}
@@ -119,7 +122,7 @@ h2{font:800 25px/1.1 var(--head);text-transform:uppercase;margin:28px 0 10px}
 @keyframes m-flap{0%{transform:rotateX(0);z-index:4}20%{transform:rotateX(180deg);z-index:0}80%{transform:rotateX(180deg);z-index:0}100%{transform:rotateX(0);z-index:4}}
 @keyframes m-paper{0%,22%{transform:translateY(0)}48%,64%{transform:translateY(-50px)}84%,100%{transform:translateY(0)}}
 @media (prefers-reduced-motion:reduce){.m-flap,.m-paper,.spin{animation-duration:6s}}
-.loading-text{margin-top:18px;color:var(--sub);font:italic 600 18px/1 var(--head);text-transform:uppercase}
+.loading-text{margin-top:18px;color:var(--sub);font:italic 600 15px/1 var(--head);text-transform:uppercase}
 /* pull down from the top to check new mail */
 .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:15;transform:translateY(-70px);transition:transform .25s}
 .ptr div{margin-top:calc(10px + env(safe-area-inset-top));background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 16px;font-size:14px;font-weight:600;color:var(--red)}
@@ -144,7 +147,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 17;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 18;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -187,6 +190,12 @@ function readRedirect() {
 function loadSavedToken() { try { const [t, e] = JSON.parse(localStorage.getItem('mi_tok') || '[]'); if (t && Date.now() < e) { S.token = t; S.exp = e; } } catch (e) {} }
 // Last copy of the 7am summary, so the app can open instantly without a trip to Google's sign-in page
 function cachedData() { try { return JSON.parse(localStorageGet('data') || 'null'); } catch (e) { return null; } }
+// Which emails are still unread in Gmail (bright white) and which are read (greyed out)
+function loadUnread() { try { const a = JSON.parse(localStorageGet('unread') || 'null'); if (Array.isArray(a)) S.unreadIds = new Set(a); } catch (e) {} }
+function saveUnread() { if (S.unreadIds) localStorageSet('unread', JSON.stringify([...S.unreadIds])); }
+function isUnread(id) { return S.unreadIds ? S.unreadIds.has(id) : true; }
+function setUnread(id, on) { if (!S.unreadIds) S.unreadIds = new Set(); if (on) S.unreadIds.add(id); else S.unreadIds.delete(id); saveUnread(); }
+async function fetchUnread() { const r = await gmail('threads?maxResults=300&q=' + encodeURIComponent('is:unread newer_than:90d')); S.unreadIds = new Set((r.threads || []).map((t) => t.id)); saveUnread(); }
 function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
 // True when the 7am run (05:00 UTC) has happened since this copy was saved
 function needsFresh(d) {
@@ -226,6 +235,7 @@ async function driveFind(name, folder) {
 async function driveRead(id) { return (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json(); }
 async function loadData() {
   try { const f = await driveFind(DATA_FILE); S.data = f ? await driveRead(f.id) : null; if (S.data) localStorageSet('data', JSON.stringify(S.data)); } catch (e) { S.data = cachedData(); }
+  try { await fetchUnread(); } catch (e) {}
   try { const f = await driveFind(FEEDBACK_FILE); if (f) { S.fbFileId = f.id; S.feedback = await driveRead(f.id) || {}; localStorageSet('fb', JSON.stringify(S.feedback)); } } catch (e) {}
 }
 async function saveFeedback() {
@@ -300,9 +310,11 @@ function render() {
   if (S.results && S.tab !== 'search') S.tab = 'search';
 
   // Top bar: date, wordmark, and a red pill for what needs you
-  const unreadN = S.live ? S.live.filter((x) => x.unread).length : emails.length;
+  const ids = new Set(emails.map((x) => x.id || x.thread_id)); (S.live || []).forEach((x) => ids.add(x.id));
+  const unreadN = [...ids].filter(isUnread).length;
+  const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length;
   const top = el('header', 'topbar');
-  const pill = el('span', 'livepill' + (unreadN ? '' : ' quiet'), unreadN ? unreadN + ' new' : 'All clear');
+  const pill = el('span', 'livepill' + (unreadN ? '' : ' quiet'), unreadN ? unreadN + ' unread' : 'All read');
   top.append(el('span', 'tb-date', new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })), el('span', 'brand', 'My Inbox'), pill);
   app.append(top);
 
@@ -317,14 +329,18 @@ function render() {
   const nav = el('nav', 'tabbar'); nav.setAttribute('aria-label', 'Sections');
   TABS.forEach(([k, label]) => {
     const b = el('button', 'tab'); b.setAttribute('aria-current', String(S.tab === k)); b.innerHTML = ICON[k]; b.append(el('span', '', label));
-    if (k === 'trackers') { const n = openTrackers(trackers).length; if (n) b.append(el('i', 'badge', String(n))); }
+    const n = k === 'inbox' ? unreadN : k === 'trackers' ? trUnread : 0; if (n) b.append(el('i', 'badge', String(n)));
     b.onclick = () => { S.tab = k; localStorageSet('tab', k); render(); window.scrollTo(0, 0); };
     nav.append(b);
   });
   app.append(nav);
 }
 
-function openTrackers(list) { return list.filter((t) => !['delivered', 'paid', 'cancelled'].includes(t.status) || (t.date && new Date(t.date) >= new Date(Date.now() - 864e5))); }
+function openTrackers(list) {
+  // Trackers stay until their date has passed, then drop off (ones without a date stay until done)
+  const today = new Date(new Date().toDateString());
+  return list.filter((t) => (t.date && !isNaN(new Date(t.date))) ? new Date(t.date) >= today : !['delivered', 'paid', 'cancelled'].includes(t.status));
+}
 function trackerThread(t) { return t.thread_id || t.threadId || (String(t.gmail_url || '').match(/#[a-z]+\/([0-9a-f]{10,})/i) || [])[1]; }
 function nextUp(list) {
   const today = new Date(new Date().toDateString());
@@ -422,7 +438,7 @@ function trackerSection(list) {
   if (!shown.length) listEl.append(el('div', 'card empty', 'Nothing being tracked here.'));
   shown.forEach((t) => {
     const k = KINDS[t.kind] || KINDS.delivery;
-    const r = el('button', 'tcard');
+    const tid0 = trackerThread(t); const r = el('button', 'tcard' + (tid0 && !isUnread(tid0) ? ' read' : ''));
     const lead = el('div', 'tdate'); lead.style.setProperty('--k', k[1]);
     if (t.date && !isNaN(new Date(t.date))) { const dt = new Date(t.date); lead.append(el('b', '', String(dt.getDate())), el('span', '', dt.toLocaleDateString([], { month: 'short' }))); }
     else lead.append(el('b', '', k[0]));
@@ -463,8 +479,9 @@ function importanceBox(key, info) {
 }
 
 function emailRow(x) {
-  const r = el('div', 'row');
-  if (x.unread) r.append(el('span', 'dot'));
+  const unread = S.unreadIds ? S.unreadIds.has(x.id) : (x.unread !== undefined ? x.unread : true);
+  const r = el('div', 'row' + (unread ? '' : ' read')); r.dataset.id = x.id;
+  if (unread) r.append(el('span', 'dot'));
   const mm = el('button', 'main'); mm.style.textAlign = 'left';
   const l1 = el('div', 'line1'); l1.append(el('span', 'from', nameOf(x.from || 'Unknown')), el('span', 'time', x.time || ''));
   mm.append(l1, el('p', 'subj', x.title || '(no subject)'));
@@ -530,7 +547,7 @@ function walk(part, out) {
   (part.parts || []).forEach((p) => walk(p, out));
 }
 function openReader(title) { $('r-title').textContent = title || ''; $('r-extra').style.visibility = 'hidden'; $('reader').classList.add('open'); history.pushState({ r: 1 }, ''); }
-function closeReader() { $('reader').classList.remove('open'); $('r-body').replaceChildren(); }
+function closeReader() { $('reader').classList.remove('open'); $('r-body').replaceChildren(); if (S.data || S.live) { const y = window.scrollY; render(); window.scrollTo(0, y); } }
 $('r-back').onclick = () => history.back();
 window.addEventListener('popstate', () => { if ($('pdf')) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
 
@@ -562,9 +579,9 @@ async function showThread(id, title) {
       body.append(box);
     });
     // Opening an email marks it read in Gmail too; the top-right button can put it back to unread
-    let isUnread = false;
+    let isUnread = false; if (!unread) setUnread(id, false);
     if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) })
-      .then(() => [S.live, Array.isArray(S.results) ? S.results : null].forEach((list) => { const it = list && list.find((x) => x.id === id); if (it) it.unread = false; }))
+      .then(() => { setUnread(id, false); [S.live, Array.isArray(S.results) ? S.results : null].forEach((list) => { const it = list && list.find((x) => x.id === id); if (it) it.unread = false; }); })
       .catch(() => { isUnread = true; paint(); });
     const ex = $('r-extra'); ex.style.visibility = 'visible';
     const paint = () => { ex.textContent = isUnread ? 'Mark read' : 'Unread'; };
@@ -573,7 +590,7 @@ async function showThread(id, title) {
       const makeUnread = !isUnread;
       try {
         await gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(makeUnread ? { addLabelIds: ['UNREAD'] } : { removeLabelIds: ['UNREAD'] }) });
-        isUnread = makeUnread; paint(); toast(isUnread ? 'Marked as unread' : 'Marked as read ✓');
+        isUnread = makeUnread; setUnread(id, isUnread); paint(); toast(isUnread ? 'Marked as unread' : 'Marked as read ✓');
         [S.live, Array.isArray(S.results) ? S.results : null].forEach((list) => { const it = list && list.find((x) => x.id === id); if (it) it.unread = isUnread; });
       } catch (e) { toast('Couldn\'t change it: ' + e.message); }
     };
@@ -663,7 +680,7 @@ async function openAttachment(msgId, a) {
 window.addEventListener('load', () => {
   const r = readRedirect();
   if (r === 'error') { localStorageSet('signedin', ''); signInScreen('Please sign in again to continue.'); return; }
-  loadSavedToken();
+  loadSavedToken(); loadUnread();
   if (S.token) { start(); return; }
   if (localStorageGet('signedin') === '1') {
     // Sign-in has run out: show the saved summary straight away if it is still today's,
