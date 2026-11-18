@@ -42,6 +42,9 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
 .fb[aria-pressed=true].star{background:var(--orange);color:#fff}
 .fb[aria-pressed=true].tick{background:var(--green);color:#fff}
 .fb[aria-pressed=true].cross{background:var(--red);color:#fff}
+.imp{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:10px 2px;border-top:.5px solid var(--line)}
+.imp .fb{flex:none;width:34px;height:34px;font-size:17px}
+.imp-tx{display:flex;flex-direction:column;gap:1px}.imp-tx small{color:var(--sub);font-size:13px;line-height:1.3}
 .seg{display:flex;background:var(--fill);border-radius:9px;padding:2px;margin:0 0 10px;overflow-x:auto}
 .seg button{flex:1;padding:6px 8px;border-radius:7px;font-size:13px;font-weight:600;white-space:nowrap}
 .seg button[aria-pressed=true]{background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.12)}
@@ -114,7 +117,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 14;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 15;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -352,6 +355,30 @@ function trackerSection(list) {
   if (trOpen) sec.append(card); return sec;
 }
 
+// ★ always important · ✓ track only (orders/invoices go on trackers) · ✕ hide emails like this one from this sender
+const IMP = [['important', 'star', '★', 'Always important', 'Everything from this sender shows up'],
+             ['track', 'tick', '✓', 'Track only', 'Hide their ordinary mail; orders, invoices and bills go on trackers'],
+             ['not_important', 'cross', '✕', 'Hide emails like this', 'Only this kind from this sender; anything else still comes through']];
+const IMP_LABEL = { important: '★ Always important', track: '✓ Track only', not_important: '✕ Hidden kind' };
+const IMP_SAID = { important: '★ Always important. The agent will learn this at 7am.', track: '✓ Track only: orders, invoices and bills still go on your trackers.', not_important: '✕ Emails like this from this sender will be hidden. Anything different still comes through.' };
+function importanceBox(key, info) {
+  const box = el('div', 'msg'); box.append(el('h3', '', 'How important is this?'));
+  const btns = IMP.map(([v, cls, icon, label, sub]) => {
+    const b = el('button', 'imp'); const ic = el('span', 'fb ' + cls, icon); const tx = el('span', 'imp-tx');
+    tx.append(el('b', '', label), el('small', '', sub)); b.append(ic, tx); b.onclick = () => set(v); box.append(b); return b;
+  });
+  const paint = () => btns.forEach((b, i) => b.firstChild.setAttribute('aria-pressed', String(S.feedback[key]?.verdict === IMP[i][0])));
+  const set = async (v) => {
+    if (S.feedback[key] && S.feedback[key].verdict === v) delete S.feedback[key];
+    else S.feedback[key] = { verdict: v, thread_id: key, from: info.from || '', from_email: info.from_email || '', title: info.title || '', at: new Date().toISOString(), processed: false };
+    paint();
+    try { await saveFeedback(); localStorageSet('fb', JSON.stringify(S.feedback)); toast(S.feedback[key] ? IMP_SAID[v] : 'Removed', 3500); } catch (e) { toast('Couldn\'t save. Check your connection.'); }
+  };
+  paint();
+  box.append(el('p', 'muted small', 'The agent applies this at 7am. Tap the same one again to undo.'));
+  return box;
+}
+
 function emailRow(x) {
   const r = el('div', 'row');
   if (x.unread) r.append(el('span', 'dot'));
@@ -361,23 +388,10 @@ function emailRow(x) {
   if (x.preview) mm.append(el('p', 'prev', x.preview));
   if (x.atts) mm.append(el('p', 'prev', '📎 ' + x.atts));
   mm.onclick = () => openThread(x.id, x.title);
-  const acts = el('div', 'acts');
-  const key = x.id; const fb = S.feedback[key] && S.feedback[key].verdict;
-  // ★ always important · ✓ track only (orders/invoices go on trackers) · ✗ not important (hidden everywhere)
-  const BTN = [['important', 'star', '★', 'Always important: everything from this sender'],
-               ['track', 'tick', '✓', 'Track only: hide their ordinary mail, keep orders, invoices and bills on trackers'],
-               ['not_important', 'cross', '✕', 'Hide emails like this one from this sender (other kinds still come through)']];
-  const SAID = { important: '★ Always important. The agent will learn this at 7am.', track: '✓ Track only: orders, invoices and bills still go on your trackers.', not_important: '✕ Emails like this from this sender will be hidden. Anything different still comes through.' };
-  const btns = BTN.map(([v, cls, icon, tip]) => { const b = el('button', 'fb ' + cls, icon); b.title = tip; b.setAttribute('aria-label', tip); b.setAttribute('aria-pressed', String(fb === v)); return b; });
-  const set = async (v) => {
-    if (S.feedback[key] && S.feedback[key].verdict === v) delete S.feedback[key];
-    else S.feedback[key] = { verdict: v, thread_id: key, from: x.from || '', from_email: x.from_email || '', title: x.title || '', at: new Date().toISOString(), processed: false };
-    btns.forEach((b, i) => b.setAttribute('aria-pressed', String(S.feedback[key]?.verdict === BTN[i][0])));
-    try { await saveFeedback(); localStorageSet('fb', JSON.stringify(S.feedback)); toast(S.feedback[key] ? SAID[v] : 'Removed', 3500); } catch (e) { toast('Couldn\'t save. Check your connection.'); }
-  };
-  btns.forEach((b, i) => { b.onclick = () => set(BTN[i][0]); });
-  acts.append(...btns);
-  r.append(avatar(x.from), mm, acts);
+  // The ★ ✓ ✕ buttons live inside the opened email; the list only shows a small mark of what was chosen
+  const fb = S.feedback[x.id] && S.feedback[x.id].verdict;
+  if (fb) mm.append(el('p', 'prev', IMP_LABEL[fb]));
+  r.append(avatar(x.from), mm);
   return r;
 }
 
@@ -498,6 +512,7 @@ async function showThread(id, title) {
       try { await navigator.clipboard.writeText(findText); toast('Copied. In Gmail, tap Search and paste.', 4000); } catch (err) { toast('Search Gmail for: ' + findText, 6000); }
       setTimeout(() => { location.href = g.href; }, 900);
     };
+    body.append(importanceBox(id, { from: hdr(last, 'from'), from_email: addr, title: subj }));
     acts.append(rp, g); body.append(acts);
     const tip = el('p', 'muted small', 'Find in Gmail app copies this email\'s sender and subject, then opens Gmail. Tap Search in Gmail and paste.');
     tip.style.cssText = 'margin:-18px 16px 30px;text-align:center'; body.append(tip);
