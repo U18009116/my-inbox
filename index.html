@@ -184,6 +184,13 @@ const nameOf = (from) => (from.match(/^\s*"?([^"<]+?)"?\s*</) || [, from])[1].tr
 function when(ms) { const d = new Date(+ms), now = new Date(); if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const y = new Date(now); y.setDate(now.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'Yesterday'; return d.toLocaleDateString([], { day: 'numeric', month: 'short' }); }
 function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 const utf8 = (s) => new TextDecoder().decode(b64(s));
+// On Android, hand Gmail links to the Gmail app itself (falls back to the website if the app isn't there).
+const IS_ANDROID = /Android/i.test(navigator.userAgent);
+function gmailLink(frag) {
+  const web = 'https://mail.google.com/mail/u/0/' + frag;
+  if (!IS_ANDROID) return web;
+  return 'intent://mail.google.com/mail/u/0/' + frag + '#Intent;scheme=https;package=com.google.android.gm;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
+}
 function decodeEntities(s) { const t = document.createElement('textarea'); t.innerHTML = s || ''; return t.value; }
 
 // ---------- screens ----------
@@ -216,9 +223,20 @@ function render() {
 
   // Refresh row
   const rr = el('div'); rr.style.cssText = 'display:flex;gap:10px;align-items:center;margin:14px 4px 0';
-  const rb = el('button', 'btn ghost', '↻ Check new mail'); rb.onclick = liveCheck;
+  const rb = el('button', 'btn ghost', S.checking ? 'Checking…' : '↻ Check new mail'); rb.onclick = liveCheck; rb.disabled = !!S.checking;
   rr.append(rb, el('span', 'muted small', d.updated_at ? 'Agent ran ' + when(Date.parse(d.updated_at)) : ''));
   app.append(rr);
+
+  // New mail (from the button), shown straight under it
+  if (S.checking || S.live) {
+    const sec = el('section'); sec.id = 'new-mail';
+    sec.append(el('h2', '', S.checking ? 'Checking Gmail…' : (S.live.length ? S.live.length + ' unread in your inbox' : 'New mail')));
+    const c = el('div', 'card');
+    if (S.checking) c.append(el('div', 'spin'));
+    else if (!S.live.length) c.append(el('div', 'empty', 'No new mail ✨'));
+    else S.live.forEach((x) => c.append(emailRow(x)));
+    sec.append(c); app.append(sec);
+  }
 
   // Trackers
   const trackers = Array.isArray(d.trackers) ? d.trackers : (d.trackers && Array.isArray(d.trackers.items) ? d.trackers.items : []);
@@ -228,15 +246,14 @@ function render() {
   app.append(el('h2', '', 'Important'));
   const emails = Array.isArray(m.emails) ? m.emails : [];
   const card = el('div', 'card');
-  if (S.live) S.live.forEach((x) => card.append(emailRow(x)));
-  else if (emails.length) emails.forEach((x) => card.append(emailRow({ id: x.id || x.thread_id, from: x.from || x.from_email, title: x.title, preview: x.preview || x.detail, time: x.time, from_email: x.from_email })));
+  if (emails.length) emails.forEach((x) => card.append(emailRow({ id: x.id || x.thread_id, from: x.from || x.from_email, title: x.title, preview: x.preview || x.detail, time: x.time, from_email: x.from_email })));
   else card.append(el('div', 'empty', S.data ? 'All clear ✨' : 'No summary from the 7am agent yet. Tap "Check new mail" to see your inbox.'));
   app.append(card);
 
   // Drafts
   const nd = Number(m.drafts) || 0;
   if (nd) {
-    const r = el('a', 'card row'); r.href = 'https://mail.google.com/mail/u/0/#drafts'; r.target = '_blank'; r.style.cssText = 'color:inherit;text-decoration:none;margin-top:12px';
+    const r = el('a', 'card row'); r.href = gmailLink('#drafts'); r.style.cssText = 'color:inherit;text-decoration:none;margin-top:12px';
     const av = el('div', 'av', '✎'); av.style.background = 'var(--gray)';
     const mm = el('div', 'main'); mm.append(el('div', 'from', nd + (nd === 1 ? ' draft reply' : ' draft replies') + ' waiting'), el('p', 'prev', 'Check and send them from Gmail'));
     r.append(av, mm); app.append(r);
@@ -318,9 +335,12 @@ async function listThreads(q, max = 20) {
   }));
 }
 async function liveCheck() {
-  toast('Checking Gmail…', 1500);
-  try { S.live = await listThreads('in:inbox -category:promotions -category:social newer_than:3d', 25); render(); if (!S.live.length) toast('Nothing new in the last 3 days'); }
-  catch (e) { toast('Couldn\'t reach Gmail: ' + e.message); }
+  S.checking = true; render();
+  const go = () => { const s = $('new-mail'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  go();
+  try { S.live = await listThreads('in:inbox is:unread -category:promotions -category:social -category:forums newer_than:14d', 25); }
+  catch (e) { S.live = null; toast('Couldn\'t reach Gmail: ' + e.message, 4000); }
+  S.checking = false; render(); go();
 }
 async function search(q) {
   S.query = q; if (!q) { S.results = null; render(); return; }
@@ -387,7 +407,7 @@ async function showThread(id, title) {
       body.append(box);
     });
     if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).catch(() => {});
-    const g = el('a', 'btn ghost', 'Open in Gmail'); g.href = 'https://mail.google.com/mail/u/0/#all/' + id; g.target = '_blank'; g.style.cssText = 'margin:4px 12px 30px;display:flex;text-decoration:none';
+    const g = el('a', 'btn ghost', 'Open in Gmail app'); g.href = gmailLink('#all/' + id); g.style.cssText = 'margin:4px 12px 30px;display:flex;text-decoration:none';
     body.append(g);
   } catch (e) { body.replaceChildren(el('div', 'empty', 'Couldn\'t open this email: ' + e.message)); }
 }
