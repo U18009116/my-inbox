@@ -73,11 +73,26 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
 #pdf{padding:10px}
 .spin{width:22px;height:22px;border:3px solid var(--fill);border-top-color:var(--blue);border-radius:50%;animation:s 1s linear infinite;margin:30px auto}
 @keyframes s{to{transform:rotate(360deg)}}
+/* opening animation: an envelope opens and a letter slides out */
+.mail-anim{position:relative;width:120px;height:124px;margin:0 auto;perspective:500px}
+.m-back{position:absolute;left:0;bottom:0;width:120px;height:78px;background:#0a5fd0;border-radius:10px;z-index:1}
+.m-paper{position:absolute;left:12px;bottom:6px;width:96px;height:68px;background:#fff;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.18);padding:13px 11px;z-index:2;animation:m-paper 2.6s ease-in-out infinite}
+.m-paper i{display:block;height:5px;border-radius:3px;background:#cfd8e6;margin-bottom:8px}
+.m-paper i:nth-child(2){width:78%}.m-paper i:nth-child(3){width:55%}
+.m-front{position:absolute;left:0;bottom:0;width:120px;height:78px;background:linear-gradient(#3a9bff,#1a7cf0);border-radius:10px;z-index:3;clip-path:polygon(0 0,50% 58%,100% 0,100% 100%,0 100%)}
+.m-flap{position:absolute;left:0;top:46px;width:120px;height:46px;background:#2a8af5;transform-origin:top center;clip-path:polygon(0 0,100% 0,50% 100%);z-index:4;animation:m-flap 2.6s ease-in-out infinite}
+@keyframes m-flap{0%{transform:rotateX(0);z-index:4}20%{transform:rotateX(180deg);z-index:0}80%{transform:rotateX(180deg);z-index:0}100%{transform:rotateX(0);z-index:4}}
+@keyframes m-paper{0%,22%{transform:translateY(0)}48%,64%{transform:translateY(-50px)}84%,100%{transform:translateY(0)}}
+.loading-text{margin-top:18px;color:var(--sub);font-size:15px;font-weight:500}
+.sec-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin:26px 0 8px;padding:0 4px;text-align:left}
+.sec-head h2{margin:0}
+.chev{color:var(--sub);font-size:15px;transition:transform .2s}
+.sec-head[aria-expanded=false] .chev{transform:rotate(-90deg)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,30,30,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;display:none;max-width:90vw}
 </style>
 </head>
 <body>
-<div class="wrap" id="app"><div class="center"><div class="spin"></div></div></div>
+<div class="wrap" id="app"><div class="center"><div><div class="mail-anim"><div class="m-back"></div><div class="m-paper"><i></i><i></i><i></i></div><div class="m-front"></div><div class="m-flap"></div></div><div class="loading-text">Opening your inbox…</div></div></div></div>
 
 <div id="reader" role="dialog" aria-modal="true">
   <div class="bar"><button id="r-back">‹ Back</button><div class="t" id="r-title"></div><button id="r-extra" style="visibility:hidden">Share</button></div>
@@ -93,7 +108,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 8;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 9;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -129,11 +144,25 @@ function readRedirect() {
   let want = null; try { want = sessionStorage.getItem('mi_state'); sessionStorage.removeItem('mi_state'); } catch (e) {}
   if (h.get('error') || (want && h.get('state') !== want)) return 'error';
   S.token = h.get('access_token'); S.exp = Date.now() + (Number(h.get('expires_in') || 3600) - 60) * 1000;
-  try { sessionStorage.setItem('mi_tok', JSON.stringify([S.token, S.exp])); } catch (e) {}
+  try { localStorage.setItem('mi_tok', JSON.stringify([S.token, S.exp])); } catch (e) {}
   localStorageSet('signedin', '1');
   return 'ok';
 }
-function loadSavedToken() { try { const [t, e] = JSON.parse(sessionStorage.getItem('mi_tok') || '[]'); if (t && Date.now() < e) { S.token = t; S.exp = e; } } catch (e) {} }
+function loadSavedToken() { try { const [t, e] = JSON.parse(localStorage.getItem('mi_tok') || '[]'); if (t && Date.now() < e) { S.token = t; S.exp = e; } } catch (e) {} }
+// Last copy of the 7am summary, so the app can open instantly without a trip to Google's sign-in page
+function cachedData() { try { return JSON.parse(localStorageGet('data') || 'null'); } catch (e) { return null; } }
+function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
+// True when the 7am run (05:00 UTC) has happened since this copy was saved
+function needsFresh(d) {
+  const run = new Date(); run.setUTCHours(5, 20, 0, 0); if (run > new Date()) run.setUTCDate(run.getUTCDate() - 1);
+  return !d || !d.updated_at || Date.parse(d.updated_at) < run.getTime();
+}
+function loader(text) {
+  const c = el('div', 'center'), box = el('div'), a = el('div', 'mail-anim');
+  const p = el('div', 'm-paper'); p.append(el('i'), el('i'), el('i'));
+  a.append(el('div', 'm-back'), p, el('div', 'm-front'), el('div', 'm-flap'));
+  box.append(a, el('div', 'loading-text', text || 'Opening your inbox…')); c.append(box); return c;
+}
 function getToken() {
   if (S.token && Date.now() < S.exp) return Promise.resolve();
   goSignIn(localStorageGet('signedin') === '1');
@@ -160,8 +189,8 @@ async function driveFind(name, folder) {
 }
 async function driveRead(id) { return (await api(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`)).json(); }
 async function loadData() {
-  try { const f = await driveFind(DATA_FILE); S.data = f ? await driveRead(f.id) : null; } catch (e) { S.data = null; }
-  try { const f = await driveFind(FEEDBACK_FILE); if (f) { S.fbFileId = f.id; S.feedback = await driveRead(f.id) || {}; } } catch (e) {}
+  try { const f = await driveFind(DATA_FILE); S.data = f ? await driveRead(f.id) : null; if (S.data) localStorageSet('data', JSON.stringify(S.data)); } catch (e) { S.data = cachedData(); }
+  try { const f = await driveFind(FEEDBACK_FILE); if (f) { S.fbFileId = f.id; S.feedback = await driveRead(f.id) || {}; localStorageSet('fb', JSON.stringify(S.feedback)); } } catch (e) {}
 }
 async function saveFeedback() {
   const body = JSON.stringify(S.feedback);
@@ -212,7 +241,7 @@ function signInScreen(msg) {
 }
 
 async function start() {
-  const app = $('app'); app.replaceChildren(el('div', 'center')); app.firstChild.append(el('div', 'spin'));
+  const app = $('app'); app.replaceChildren(loader());
   await loadData();
   render();
 }
@@ -250,12 +279,17 @@ function render() {
   if (trackers.length) app.append(trackerSection(trackers));
 
   // Important
-  app.append(el('h2', '', 'Important'));
+  const impOpen = localStorageGet('imp_closed') !== '1';
+  const head = el('button', 'sec-head'); head.setAttribute('aria-expanded', String(impOpen));
+  const impN = Array.isArray(m.emails) ? m.emails.length : 0;
+  head.append(el('h2', '', 'Important' + (impN ? ' · ' + impN : '')), el('span', 'chev', '▾'));
+  head.onclick = () => { localStorageSet('imp_closed', impOpen ? '1' : ''); render(); };
+  app.append(head);
   const emails = Array.isArray(m.emails) ? m.emails : [];
   const card = el('div', 'card');
   if (emails.length) emails.forEach((x) => card.append(emailRow({ id: x.id || x.thread_id, from: x.from || x.from_email, title: x.title, preview: x.preview || x.detail, time: x.time, from_email: x.from_email })));
   else card.append(el('div', 'empty', S.data ? 'All clear ✨' : 'No summary from the 7am agent yet. Tap "Check new mail" to see your inbox.'));
-  app.append(card);
+  if (impOpen) app.append(card);
 
   // Drafts
   const nd = Number(m.drafts) || 0;
@@ -480,7 +514,13 @@ window.addEventListener('load', () => {
   if (r === 'error') { localStorageSet('signedin', ''); signInScreen('Please sign in again to continue.'); return; }
   loadSavedToken();
   if (S.token) { start(); return; }
-  if (localStorageGet('signedin') === '1') { goSignIn(true); return; } // quietly renews without asking
+  if (localStorageGet('signedin') === '1') {
+    // Sign-in has run out: show the saved summary straight away if it is still today's,
+    // and only go back to Google when something new is needed (no loading bar on every open)
+    const saved = cachedData();
+    if (saved && !needsFresh(saved)) { S.data = saved; S.feedback = cachedFeedback(); render(); return; }
+    goSignIn(true); return; // quietly renews without asking
+  }
   signInScreen();
 });
 </script>
