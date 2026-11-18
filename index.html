@@ -184,12 +184,13 @@ const nameOf = (from) => (from.match(/^\s*"?([^"<]+?)"?\s*</) || [, from])[1].tr
 function when(ms) { const d = new Date(+ms), now = new Date(); if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); const y = new Date(now); y.setDate(now.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'Yesterday'; return d.toLocaleDateString([], { day: 'numeric', month: 'short' }); }
 function b64(s) { s = s.replace(/-/g, '+').replace(/_/g, '/'); const bin = atob(s); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
 const utf8 = (s) => new TextDecoder().decode(b64(s));
-// On Android, hand Gmail links to the Gmail app itself (falls back to the website if the app isn't there).
+// On Android, launch the Gmail app itself (Google doesn't let web apps jump to one email inside it).
+// Falls back to the Gmail website if the app can't be opened.
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 function gmailLink(frag) {
   const web = 'https://mail.google.com/mail/u/0/' + frag;
   if (!IS_ANDROID) return web;
-  return 'intent://mail.google.com/mail/u/0/' + frag + '#Intent;scheme=https;package=com.google.android.gm;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
+  return 'intent:#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.google.android.gm;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
 }
 function decodeEntities(s) { const t = document.createElement('textarea'); t.innerHTML = s || ''; return t.value; }
 
@@ -407,8 +408,17 @@ async function showThread(id, title) {
       body.append(box);
     });
     if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).catch(() => {});
-    const g = el('a', 'btn ghost', 'Open in Gmail app'); g.href = gmailLink('#all/' + id); g.style.cssText = 'margin:4px 12px 30px;display:flex;text-decoration:none';
-    body.append(g);
+    // Reply (opens the Gmail app's compose screen with the reply filled in) and open the Gmail app
+    const last = th.messages[th.messages.length - 1];
+    const replyTo = hdr(last, 'reply-to') || hdr(last, 'from');
+    const addr = (replyTo.match(/<([^>]+)>/) || [, replyTo])[1].trim();
+    const subj = hdr(last, 'subject');
+    const acts = el('div'); acts.style.cssText = 'display:flex;gap:10px;margin:4px 12px 30px';
+    const rp = el('a', 'btn', '↩ Reply in Gmail app'); rp.style.cssText = 'flex:1;text-decoration:none';
+    rp.href = 'mailto:' + encodeURIComponent(addr) + '?subject=' + encodeURIComponent(/^re:/i.test(subj) ? subj : 'Re: ' + subj);
+    const g = el('a', 'btn ghost', 'Open Gmail app'); g.style.cssText = 'flex:1;text-decoration:none';
+    g.href = gmailLink('#all/' + id);
+    acts.append(rp, g); body.append(acts);
   } catch (e) { body.replaceChildren(el('div', 'empty', 'Couldn\'t open this email: ' + e.message)); }
 }
 
