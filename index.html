@@ -686,7 +686,7 @@ window.addEventListener('load', () => {
     // Sign-in has run out: show the saved summary straight away if it is still today's,
     // and only go back to Google when something new is needed (no loading bar on every open)
     const saved = cachedData();
-    if (saved && !needsFresh(saved)) { S.data = saved; S.feedback = cachedFeedback(); render(); return; }
+    if (saved && !needsFresh(saved) && S.unreadIds) { S.data = saved; S.feedback = cachedFeedback(); render(); return; }
     goSignIn(true); return; // quietly renews without asking
   }
   signInScreen();
