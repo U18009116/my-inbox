@@ -117,7 +117,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 15;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 16;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -357,8 +357,7 @@ function trackerSection(list) {
 
 // ★ always important · ✓ track only (orders/invoices go on trackers) · ✕ hide emails like this one from this sender
 const IMP = [['important', 'star', '★', 'Always important', 'Everything from this sender shows up'],
-             ['track', 'tick', '✓', 'Track only', 'Hide their ordinary mail; orders, invoices and bills go on trackers'],
-             ['not_important', 'cross', '✕', 'Hide emails like this', 'Only this kind from this sender; anything else still comes through']];
+             ['track', 'tick', '✓', 'Track only', 'Hide their ordinary mail; orders, invoices and bills go on trackers']];
 const IMP_LABEL = { important: '★ Always important', track: '✓ Track only', not_important: '✕ Hidden kind' };
 const IMP_SAID = { important: '★ Always important. The agent will learn this at 7am.', track: '✓ Track only: orders, invoices and bills still go on your trackers.', not_important: '✕ Emails like this from this sender will be hidden. Anything different still comes through.' };
 function importanceBox(key, info) {
@@ -478,8 +477,11 @@ async function showThread(id, title) {
       }
       body.append(box);
     });
-    // Opening an email no longer marks it read: Herman taps "Mark read" (top right) when he's done, or "Unread" to undo
-    let isUnread = unread > 0;
+    // Opening an email marks it read in Gmail too; the top-right button can put it back to unread
+    let isUnread = false;
+    if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) })
+      .then(() => [S.live, Array.isArray(S.results) ? S.results : null].forEach((list) => { const it = list && list.find((x) => x.id === id); if (it) it.unread = false; }))
+      .catch(() => { isUnread = true; paint(); });
     const ex = $('r-extra'); ex.style.visibility = 'visible';
     const paint = () => { ex.textContent = isUnread ? 'Mark read' : 'Unread'; };
     paint();
