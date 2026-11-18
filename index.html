@@ -93,9 +93,15 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
+const APP_VERSION = 7;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then((r) => r.update()).catch(() => {});
+  // When a newer version takes over, reload once so it shows straight away
+  let reloaded = !navigator.serviceWorker.controller; // first visit: nothing old to replace
+  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloaded) { reloaded = true; location.reload(); } });
+}
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -267,6 +273,7 @@ function render() {
     [['Archived', (m.adverts_archived || 0) + (m.newsletters_archived || 0)], ['Unsubscribed', m.newsletters_unsubscribed], ['Spam', m.spam_moved]].forEach(([k, v]) => { const s = el('div', 'stat'); s.append(el('b', '', String(v || 0)), el('span', 'muted small', k)); g.append(s); });
     app.append(g);
   }
+  const ver = el('p', 'muted small', 'My Inbox · version ' + APP_VERSION); ver.style.cssText = 'text-align:center;margin-top:28px'; app.append(ver);
 }
 
 const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries'], ticket: ['🎟️', 'var(--purple)', 'Tickets'], meeting: ['👥', 'var(--blue)', 'Meetings'], bill: ['🧾', 'var(--red)', 'Bills'], booking: ['🧳', 'var(--teal)', 'Tickets'] };
@@ -416,9 +423,18 @@ async function showThread(id, title) {
     const acts = el('div'); acts.style.cssText = 'display:flex;gap:10px;margin:4px 12px 30px';
     const rp = el('a', 'btn', '↩ Reply in Gmail app'); rp.style.cssText = 'flex:1;text-decoration:none';
     rp.href = 'mailto:' + encodeURIComponent(addr) + '?subject=' + encodeURIComponent(/^re:/i.test(subj) ? subj : 'Re: ' + subj);
-    const g = el('a', 'btn ghost', 'Open Gmail app'); g.style.cssText = 'flex:1;text-decoration:none';
+    // Find in Gmail app: copy a search for this email, then open the Gmail app so it can be pasted into Gmail's search
+    const g = el('a', 'btn ghost', '🔍 Find in Gmail app'); g.style.cssText = 'flex:1;text-decoration:none';
     g.href = gmailLink('#all/' + id);
+    const findText = (addr ? 'from:' + addr + ' ' : '') + subj.replace(/^(re|fwd?):\s*/i, '');
+    g.onclick = async (e) => {
+      e.preventDefault();
+      try { await navigator.clipboard.writeText(findText); toast('Copied. In Gmail, tap Search and paste.', 4000); } catch (err) { toast('Search Gmail for: ' + findText, 6000); }
+      setTimeout(() => { location.href = g.href; }, 900);
+    };
     acts.append(rp, g); body.append(acts);
+    const tip = el('p', 'muted small', 'Find in Gmail app copies this email\'s sender and subject, then opens Gmail. Tap Search in Gmail and paste.');
+    tip.style.cssText = 'margin:-18px 16px 30px;text-align:center'; body.append(tip);
   } catch (e) { body.replaceChildren(el('div', 'empty', 'Couldn\'t open this email: ' + e.message)); }
 }
 
