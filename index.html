@@ -48,6 +48,12 @@ h2{font:800 21px/1.15 var(--head);text-transform:uppercase;letter-spacing:-.01em
 /* read emails fade back; unread ones stay bright white */
 .row.read .from,.row.read .subj{color:var(--sub)}.row.read .prev{color:#6f6f6f}.row.read .av{opacity:.45}
 .tcard.read .tname,.tcard.read .tsub{color:var(--sub)}.tcard.read .tdate{opacity:.5}
+/* delivery timeline */
+.tl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px}.tl i{height:5px;background:var(--fill);border-radius:3px}.tl i.on{background:var(--orange)}
+.tl-lb{display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin-top:4px}.tl-lb .now{color:var(--text);font-weight:600}
+/* cleaned up */
+.row.kv{justify-content:space-between;align-items:center}.row.kv b{font:800 20px/1 var(--head)}
+.small-btn{flex:none;align-self:center;padding:8px 10px;font-size:13px}.btn:disabled{opacity:.6}
 .empty{padding:22px 16px;color:var(--sub)}
 .sec-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin:28px 0 10px;text-align:left}
 .sec-head h2{margin:0}
@@ -147,7 +153,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 18;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 19;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -196,6 +202,14 @@ function saveUnread() { if (S.unreadIds) localStorageSet('unread', JSON.stringif
 function isUnread(id) { return S.unreadIds ? S.unreadIds.has(id) : true; }
 function setUnread(id, on) { if (!S.unreadIds) S.unreadIds = new Set(); if (on) S.unreadIds.add(id); else S.unreadIds.delete(id); saveUnread(); }
 async function fetchUnread() { const r = await gmail('threads?maxResults=300&q=' + encodeURIComponent('is:unread newer_than:90d')); S.unreadIds = new Set((r.threads || []).map((t) => t.id)); saveUnread(); }
+// Draft replies waiting in Gmail
+async function loadDrafts() {
+  const r = await gmail('drafts?maxResults=10');
+  S.drafts = await Promise.all((r.drafts || []).map(async (dr) => {
+    const g = await gmail(`drafts/${dr.id}?format=metadata`); const msg = g.message || {};
+    return { id: dr.id, to: hdr(msg, 'to'), subject: hdr(msg, 'subject'), snippet: decodeEntities(msg.snippet || ''), time: msg.internalDate ? when(msg.internalDate) : '' };
+  }));
+}
 function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
 // True when the 7am run (05:00 UTC) has happened since this copy was saved
 function needsFresh(d) {
@@ -236,6 +250,7 @@ async function driveRead(id) { return (await api(`https://www.googleapis.com/dri
 async function loadData() {
   try { const f = await driveFind(DATA_FILE); S.data = f ? await driveRead(f.id) : null; if (S.data) localStorageSet('data', JSON.stringify(S.data)); } catch (e) { S.data = cachedData(); }
   try { await fetchUnread(); } catch (e) {}
+  try { await loadDrafts(); } catch (e) { S.drafts = null; }
   try { const f = await driveFind(FEEDBACK_FILE); if (f) { S.fbFileId = f.id; S.feedback = await driveRead(f.id) || {}; localStorageSet('fb', JSON.stringify(S.feedback)); } } catch (e) {}
 }
 async function saveFeedback() {
@@ -387,14 +402,21 @@ function inboxTab(page, d, m, emails, trackers) {
   else card.append(el('div', 'empty', S.data ? 'Nothing needs you right now.' : 'No summary from the 7am agent yet. Pull down to check your inbox.'));
   if (impOpen) page.append(card);
 
-  // Drafts
-  const nd = Number(m.drafts) || 0;
-  if (nd) {
-    const r = el('a', 'card row'); r.href = gmailLink('#drafts'); r.style.cssText = 'color:inherit;text-decoration:none;margin-top:12px';
+  // Draft replies (live from Gmail; nothing is sent until Herman presses Send)
+  page.append(el('h2', '', 'Draft replies'));
+  const dc = el('div', 'card');
+  if (!S.drafts) dc.append(el('div', 'empty', 'Your drafts show here once the app has signed in.'));
+  else if (!S.drafts.length) dc.append(el('div', 'empty', 'No drafts waiting. When the agent writes a reply for you, it shows up here.'));
+  else S.drafts.forEach((x) => {
+    const r = el('a', 'row'); r.href = gmailLink('#drafts'); r.style.cssText = 'color:inherit;text-decoration:none';
     const av = el('div', 'av', '✎'); av.style.background = 'var(--fill)';
-    const mm = el('div', 'main'); mm.append(el('div', 'from', nd + (nd === 1 ? ' draft reply' : ' draft replies')), el('p', 'prev', 'Waiting for you to check and send in Gmail'));
-    r.append(av, mm); page.append(r);
-  }
+    const mm = el('div', 'main'); const l1 = el('div', 'line1');
+    l1.append(el('span', 'from', 'To ' + nameOf(x.to || 'someone')), el('span', 'time', x.time || ''));
+    mm.append(l1, el('p', 'subj', x.subject || '(no subject)')); if (x.snippet) mm.append(el('p', 'prev', x.snippet));
+    r.append(av, mm); dc.append(r);
+  });
+  page.append(dc);
+  page.append(el('p', 'hint', 'Written in your style and waiting in Gmail. Nothing is sent until you press Send.'));
 }
 
 function searchTab(page) {
@@ -406,14 +428,40 @@ function searchTab(page) {
   else page.append(el('p', 'hint', 'Type what you are looking for, like a Takealot invoice or your graduation certificate. PDFs open straight away.'));
 }
 
+const CLEAN_KIND = { advert: 'Advert', newsletter: 'Newsletter', spam: 'Spam' };
 function cleanTab(page, d, m) {
   page.append(el('h2', '', 'Cleaned up'));
-  if (m.date) {
-    const g = el('div', 'stats');
-    [['Archived', (m.adverts_archived || 0) + (m.newsletters_archived || 0)], ['Unsubscribed', m.newsletters_unsubscribed], ['Spam', m.spam_moved]].forEach(([k, v]) => { const s = el('div', 'stat'); s.append(el('b', '', String(v || 0)), el('span', 'muted small', k)); g.append(s); });
-    page.append(g);
-    page.append(el('p', 'hint', 'From the agent\'s run' + (d.updated_at ? ' at ' + when(Date.parse(d.updated_at)) : '') + '. Adverts are archived, not deleted, so you can still find them in Gmail.'));
-  } else page.append(el('p', 'hint', 'The numbers appear after the 7am run.'));
+  if (!m.date) { page.append(el('p', 'hint', 'The numbers appear after the 7am run.')); return; }
+  const c = el('div', 'card');
+  [['Adverts archived', m.adverts_archived], ['Newsletters archived', m.newsletters_archived], ['Unsubscribed', m.newsletters_unsubscribed], ['Moved to spam', m.spam_moved]].forEach(([k, v]) => { const r = el('div', 'row kv'); r.append(el('span', '', k), el('b', '', String(v || 0))); c.append(r); });
+  page.append(c);
+  page.append(el('p', 'hint', 'From the agent\'s run' + (d.updated_at ? ' at ' + when(Date.parse(d.updated_at)) : '') + '. Nothing is ever deleted: archived mail is still in Gmail.'));
+
+  // Who was cleaned up, with a way to bring a sender back
+  page.append(el('h2', '', 'Senders cleaned up'));
+  const list = Array.isArray(m.cleaned) ? m.cleaned : [];
+  const sc = el('div', 'card');
+  if (!list.length) sc.append(el('div', 'empty', 'The list of senders shows here after the next 7am run.'));
+  list.forEach((x) => {
+    const r = el('div', 'row');
+    const mm = el('div', 'main'); const l1 = el('div', 'line1');
+    l1.append(el('span', 'from', nameOf(x.from || x.from_email || 'Unknown')), el('span', 'time', CLEAN_KIND[x.kind] || x.kind || ''));
+    mm.append(l1); if (x.subject) mm.append(el('p', 'prev', x.subject));
+    const done = S.feedback[x.thread_id] && S.feedback[x.thread_id].verdict === 'important';
+    const b = el('button', 'btn ghost small-btn', done ? '★ Important' : (x.kind === 'spam' ? 'Not spam' : 'Make important'));
+    b.disabled = !!done || !x.thread_id;
+    b.onclick = async () => {
+      b.disabled = true;
+      try {
+        await gmail(`threads/${x.thread_id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ addLabelIds: ['INBOX', 'UNREAD'], removeLabelIds: x.kind === 'spam' ? ['SPAM'] : [] }) });
+        S.feedback[x.thread_id] = { verdict: 'important', thread_id: x.thread_id, from: x.from || '', from_email: x.from_email || '', title: x.subject || '', at: new Date().toISOString(), processed: false };
+        await saveFeedback(); localStorageSet('fb', JSON.stringify(S.feedback)); setUnread(x.thread_id, true);
+        b.textContent = '★ Important'; toast('Back in your inbox. Everything from ' + nameOf(x.from || x.from_email || 'this sender') + ' now counts as important.', 4000);
+      } catch (e) { b.disabled = false; toast('Couldn\'t change it: ' + e.message); }
+    };
+    r.append(avatar(x.from || x.from_email), mm, b); sc.append(r);
+  });
+  page.append(sc);
 }
 
 const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries', 'Delivery'], ticket: ['🎟️', 'var(--purple)', 'Tickets', 'Ticket'], meeting: ['👥', 'var(--blue)', 'Meetings', 'Meeting'], bill: ['🧾', 'var(--red)', 'Bills', 'Bill'], booking: ['🧳', 'var(--teal)', 'Tickets', 'Booking'] };
@@ -448,6 +496,13 @@ function trackerSection(list) {
     mm.append(el('span', 'tname', t.title || k[3]));
     const sub = [t.from, t.place].filter(Boolean).join(', '); if (sub) mm.append(el('span', 'tsub', sub));
     const meta = [t.time, t.ref].filter(Boolean).join('   '); if (meta) mm.append(el('span', 'tmeta', meta));
+    if (t.kind === 'delivery') {
+      // Delivery timeline: Ordered, On its way, Delivered
+      const step = t.status === 'delivered' ? 2 : ['shipped', 'out_for_delivery', 'ready_for_collection'].includes(t.status) ? 1 : 0;
+      const tl = el('div', 'tl'); for (let i = 0; i < 3; i++) tl.append(el('i', i <= step ? 'on' : ''));
+      const lb = el('div', 'tl-lb'); ['Ordered', t.status === 'ready_for_collection' ? 'Ready to collect' : 'On its way', 'Delivered'].forEach((s, i) => lb.append(el('span', i === step ? 'now' : '', s)));
+      mm.append(tl, lb);
+    }
     r.append(lead, mm, el('span', 'go', '›'));
     const tid = trackerThread(t); if (tid) r.onclick = () => openThread(tid, t.title);
     listEl.append(r);
