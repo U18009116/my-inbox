@@ -280,11 +280,11 @@ function render() {
 
   // Important
   const impOpen = localStorageGet('imp_closed') !== '1';
-  const head = el('button', 'sec-head'); head.setAttribute('aria-expanded', String(impOpen));
+  const impHead = el('button', 'sec-head'); impHead.setAttribute('aria-expanded', String(impOpen));
   const impN = Array.isArray(m.emails) ? m.emails.length : 0;
-  head.append(el('h2', '', 'Important' + (impN ? ' · ' + impN : '')), el('span', 'chev', '▾'));
-  head.onclick = () => { localStorageSet('imp_closed', impOpen ? '1' : ''); render(); };
-  app.append(head);
+  impHead.append(el('h2', '', 'Important' + (impN ? ' · ' + impN : '')), el('span', 'chev', '▾'));
+  impHead.onclick = () => { localStorageSet('imp_closed', impOpen ? '1' : ''); render(); };
+  app.append(impHead);
   const emails = Array.isArray(m.emails) ? m.emails : [];
   const card = el('div', 'card');
   if (emails.length) emails.forEach((x) => card.append(emailRow({ id: x.id || x.thread_id, from: x.from || x.from_email, title: x.title, preview: x.preview || x.detail, time: x.time, from_email: x.from_email })));
