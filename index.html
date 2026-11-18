@@ -108,7 +108,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 10;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 11;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -316,15 +316,16 @@ function trackerSection(list) {
   // The tabs (Deliveries, Tickets, ...) always stay visible; only the list under them folds away
   const trOpen = localStorageGet('tr_closed') !== '1';
   const sec = el('section');
-  const trHead = el('button', 'sec-head'); trHead.setAttribute('aria-expanded', String(trOpen));
-  trHead.append(el('h2', '', 'Trackers'), el('span', 'chev', '▾'));
-  trHead.onclick = () => { localStorageSet('tr_closed', trOpen ? '1' : ''); render(); };
-  sec.append(trHead);
+  sec.append(el('h2', '', 'Trackers'));
   const open = list.filter((t) => !['delivered', 'paid', 'cancelled'].includes(t.status) || (t.date && new Date(t.date) >= new Date(Date.now() - 864e5)));
   const seg = el('div', 'seg');
   [['all', 'All'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
     const n = k === 'all' ? open.length : open.filter((t) => groupOf(t.kind) === k).length;
-    const b = el('button', '', label + (n ? ' ' + n : '')); b.setAttribute('aria-pressed', String(S.kind === k)); b.onclick = () => { S.kind = k; localStorageSet('tr_closed', ''); render(); }; seg.append(b);
+    // Tap a tab to show its list; tap the same tab again to fold it away (▾ open, ▸ folded)
+    const on = S.kind === k;
+    const b = el('button', '', label + (n ? ' ' + n : '') + (on ? (trOpen ? ' ▾' : ' ▸') : '')); b.setAttribute('aria-pressed', String(on));
+    b.onclick = () => { if (on) localStorageSet('tr_closed', trOpen ? '1' : ''); else { S.kind = k; localStorageSet('tr_closed', ''); } render(); };
+    seg.append(b);
   });
   sec.append(seg);
   const card = el('div', 'card');
