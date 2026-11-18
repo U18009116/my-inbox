@@ -88,6 +88,10 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
 .sec-head h2{margin:0}
 .chev{color:var(--sub);font-size:24px;line-height:1;padding:2px 6px;transition:transform .2s}
 .sec-head[aria-expanded=false] .chev{transform:rotate(-90deg)}
+/* pull down from the top to check new mail (Chrome's own pull-to-reload is switched off) */
+html,body{overscroll-behavior-y:contain}
+.ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:15;transform:translateY(-70px);transition:transform .25s}
+.ptr div{margin-top:calc(10px + env(safe-area-inset-top));background:var(--card);border-radius:20px;padding:8px 16px;box-shadow:0 2px 12px rgba(0,0,0,.18);font-size:14px;font-weight:600;color:var(--blue)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,30,30,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;display:none;max-width:90vw}
 </style>
 </head>
@@ -99,6 +103,7 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
   <div class="scroll" id="r-body"></div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="ptr" id="ptr"><div id="ptr-t">↓ Pull to check new mail</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -108,7 +113,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 11;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 12;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -259,8 +264,7 @@ function render() {
 
   // Refresh row
   const rr = el('div'); rr.style.cssText = 'display:flex;gap:10px;align-items:center;margin:14px 4px 0';
-  const rb = el('button', 'btn ghost', S.checking ? 'Checking…' : '↻ Check new mail'); rb.onclick = liveCheck; rb.disabled = !!S.checking;
-  rr.append(rb, el('span', 'muted small', d.updated_at ? 'Agent ran ' + when(Date.parse(d.updated_at)) : ''));
+  rr.append(el('span', 'muted small', (S.checking ? 'Checking for new mail…' : '↓ Pull down to check new mail') + (d.updated_at ? ' · Agent ran ' + when(Date.parse(d.updated_at)) : '')));
   app.append(rr);
 
   // New mail (from the button), shown straight under it
@@ -516,6 +520,28 @@ async function openAttachment(msgId, a) {
 }
 
 // ---------- boot ----------
+// Pull down from the top of the main screen to check new mail
+(function pullToCheck() {
+  const P = $('ptr'), T = $('ptr-t'); let y0 = null, dy = 0;
+  const reset = () => { P.style.transition = ''; P.style.transform = ''; };
+  addEventListener('touchstart', (e) => {
+    const onMain = !$('reader').classList.contains('open') && !S.checking && !S.results && $('app').querySelector('header');
+    y0 = (onMain && window.scrollY <= 0) ? e.touches[0].clientY : null; dy = 0;
+  }, { passive: true });
+  addEventListener('touchmove', (e) => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0) { reset(); return; }
+    P.style.transition = 'none'; P.style.transform = 'translateY(' + (Math.min(dy * 0.5, 80) - 70) + 'px)';
+    T.textContent = dy > 140 ? '↻ Release to check new mail' : '↓ Pull to check new mail';
+  }, { passive: true });
+  addEventListener('touchend', () => {
+    if (y0 == null) return; y0 = null; P.style.transition = '';
+    if (dy > 140) { T.textContent = 'Checking…'; P.style.transform = 'translateY(0)'; liveCheck().finally(reset); }
+    else reset();
+  });
+})();
+
 window.addEventListener('load', () => {
   const r = readRedirect();
   if (r === 'error') { localStorageSet('signedin', ''); signInScreen('Please sign in again to continue.'); return; }
