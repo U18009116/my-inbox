@@ -85,7 +85,6 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
 // ---- Settings (no secrets here: a Google "client ID" is public by design) ----
@@ -93,6 +92,7 @@ const CLIENT_ID = '177429821917-kcu5ejvtcvkhjt1cufv1imslthtv7mj2.apps.googleuser
 const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
+const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -104,21 +104,34 @@ let tokenClient, tokenWait = null;
 
 function toast(msg, ms = 2600) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => (t.style.display = 'none'), ms); }
 
-// ---------- Google sign-in ----------
-function initAuth() {
-  tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID, scope: SCOPES, login_hint: localStorageGet('hint') || undefined,
-    callback: (r) => {
-      const w = tokenWait; tokenWait = null;
-      if (r && r.access_token) { S.token = r.access_token; S.exp = Date.now() + (r.expires_in - 60) * 1000; localStorageSet('signedin', '1'); w && w.res(); }
-      else w && w.rej(new Error((r && r.error) || 'sign-in failed'));
-    },
-    error_callback: (e) => { const w = tokenWait; tokenWait = null; w && w.rej(new Error(e && e.type || 'popup closed')); }
-  });
+// ---------- Google sign-in (same page, no pop-up window) ----------
+const REDIRECT = location.origin + location.pathname;
+function goSignIn(silent) {
+  const state = Math.random().toString(36).slice(2);
+  try { sessionStorage.setItem('mi_state', state); } catch (e) {}
+  const p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPES, include_granted_scopes: 'true', state });
+  if (silent) p.set('prompt', 'none');
+  const hint = localStorageGet('hint'); if (hint) p.set('login_hint', hint);
+  location.assign('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
 }
-function getToken(interactive) {
+// Reads the sign-in result Google sends back in the address (#access_token=...). Returns 'ok', 'error' or null.
+function readRedirect() {
+  if (!location.hash || location.hash.length < 2) return null;
+  const h = new URLSearchParams(location.hash.slice(1));
+  if (!h.has('access_token') && !h.has('error')) return null;
+  history.replaceState(null, '', REDIRECT);
+  let want = null; try { want = sessionStorage.getItem('mi_state'); sessionStorage.removeItem('mi_state'); } catch (e) {}
+  if (h.get('error') || (want && h.get('state') !== want)) return 'error';
+  S.token = h.get('access_token'); S.exp = Date.now() + (Number(h.get('expires_in') || 3600) - 60) * 1000;
+  try { sessionStorage.setItem('mi_tok', JSON.stringify([S.token, S.exp])); } catch (e) {}
+  localStorageSet('signedin', '1');
+  return 'ok';
+}
+function loadSavedToken() { try { const [t, e] = JSON.parse(sessionStorage.getItem('mi_tok') || '[]'); if (t && Date.now() < e) { S.token = t; S.exp = e; } } catch (e) {} }
+function getToken() {
   if (S.token && Date.now() < S.exp) return Promise.resolve();
-  return new Promise((res, rej) => { tokenWait = { res, rej }; tokenClient.requestAccessToken({ prompt: interactive ? '' : 'none' }); });
+  goSignIn(localStorageGet('signedin') === '1');
+  return new Promise(() => {}); // the page is leaving for Google's sign-in
 }
 function localStorageGet(k) { try { return localStorage.getItem('mi_' + k); } catch (e) { return null; } }
 function localStorageSet(k, v) { try { localStorage.setItem('mi_' + k, v); } catch (e) {} }
@@ -134,8 +147,8 @@ const G = 'https://gmail.googleapis.com/gmail/v1/users/me/';
 const gmail = async (path, opts) => (await api(G + path, opts)).json();
 
 // ---------- Drive: agent data + feedback ----------
-async function driveFind(name) {
-  const q = encodeURIComponent(`name='${name}' and trashed=false`);
+async function driveFind(name, folder) {
+  const q = encodeURIComponent(`name='${name}' and trashed=false` + (folder ? ` and mimeType='application/vnd.google-apps.folder' and 'root' in parents` : ''));
   const r = await (await api(`https://www.googleapis.com/drive/v3/files?q=${q}&orderBy=modifiedTime desc&fields=files(id,modifiedTime)&pageSize=1`)).json();
   return r.files && r.files[0];
 }
@@ -149,11 +162,16 @@ async function saveFeedback() {
   if (S.fbFileId) {
     await api(`https://www.googleapis.com/upload/drive/v3/files/${S.fbFileId}?uploadType=media`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
   } else {
-    const meta = { name: FEEDBACK_FILE, mimeType: 'application/json' };
-    const fd = new FormData();
-    fd.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
-    fd.append('file', new Blob([body], { type: 'application/json' }));
-    const r = await (await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: fd })).json();
+    // Save it in the "Claude" folder in Drive; if Google won't allow that, save it loose and the 7am agent moves it there.
+    const make = async (parents) => {
+      const meta = { name: FEEDBACK_FILE, mimeType: 'application/json' }; if (parents) meta.parents = parents;
+      const fd = new FormData();
+      fd.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+      fd.append('file', new Blob([body], { type: 'application/json' }));
+      return (await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: fd })).json();
+    };
+    let r;
+    try { const f = await driveFind(DRIVE_FOLDER, true); r = await make(f ? [f.id] : null); } catch (e) { r = await make(null); }
     S.fbFileId = r.id;
   }
 }
@@ -174,7 +192,7 @@ function signInScreen(msg) {
   const c = el('div', 'center'); const box = el('div');
   box.append(el('div', '', '📬'), el('h1', '', 'My Inbox'), el('p', '', msg || 'Sign in with your Google account to see your important emails and open attachments instantly.'));
   const b = el('button', 'btn', 'Sign in with Google');
-  b.onclick = async () => { try { await getToken(true); await start(); } catch (e) { toast('Sign-in didn\'t finish. Try again.'); } };
+  b.onclick = () => goSignIn(false);
   box.append(b); c.append(box); app.append(c);
   box.firstChild.style.fontSize = '56px';
 }
@@ -408,13 +426,12 @@ async function openAttachment(msgId, a) {
 
 // ---------- boot ----------
 window.addEventListener('load', () => {
-  if (CLIENT_ID.startsWith('__')) { signInScreen('This app is still being set up.'); return; }
-  const wait = setInterval(async () => {
-    if (!window.google || !google.accounts) return;
-    clearInterval(wait); initAuth();
-    if (localStorageGet('signedin')) { try { await getToken(false); await start(); return; } catch (e) {} }
-    signInScreen();
-  }, 100);
+  const r = readRedirect();
+  if (r === 'error') { localStorageSet('signedin', ''); signInScreen('Please sign in again to continue.'); return; }
+  loadSavedToken();
+  if (S.token) { start(); return; }
+  if (localStorageGet('signedin') === '1') { goSignIn(true); return; } // quietly renews without asking
+  signInScreen();
 });
 </script>
 </body>
