@@ -86,7 +86,7 @@ h2{font-size:20px;font-weight:700;margin:26px 4px 8px;letter-spacing:-.01em}
 .loading-text{margin-top:18px;color:var(--sub);font-size:15px;font-weight:500}
 .sec-head{display:flex;align-items:center;justify-content:space-between;width:100%;margin:26px 0 8px;padding:0 4px;text-align:left}
 .sec-head h2{margin:0}
-.chev{color:var(--sub);font-size:15px;transition:transform .2s}
+.chev{color:var(--sub);font-size:24px;line-height:1;padding:2px 6px;transition:transform .2s}
 .sec-head[aria-expanded=false] .chev{transform:rotate(-90deg)}
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(30,30,30,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;display:none;max-width:90vw}
 </style>
@@ -108,7 +108,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 9;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 10;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -313,12 +313,18 @@ function render() {
 const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries'], ticket: ['🎟️', 'var(--purple)', 'Tickets'], meeting: ['👥', 'var(--blue)', 'Meetings'], bill: ['🧾', 'var(--red)', 'Bills'], booking: ['🧳', 'var(--teal)', 'Tickets'] };
 const groupOf = (k) => (k === 'booking' ? 'ticket' : k);
 function trackerSection(list) {
-  const sec = el('section'); sec.append(el('h2', '', 'Trackers'));
+  // The tabs (Deliveries, Tickets, ...) always stay visible; only the list under them folds away
+  const trOpen = localStorageGet('tr_closed') !== '1';
+  const sec = el('section');
+  const trHead = el('button', 'sec-head'); trHead.setAttribute('aria-expanded', String(trOpen));
+  trHead.append(el('h2', '', 'Trackers'), el('span', 'chev', '▾'));
+  trHead.onclick = () => { localStorageSet('tr_closed', trOpen ? '1' : ''); render(); };
+  sec.append(trHead);
   const open = list.filter((t) => !['delivered', 'paid', 'cancelled'].includes(t.status) || (t.date && new Date(t.date) >= new Date(Date.now() - 864e5)));
   const seg = el('div', 'seg');
   [['all', 'All'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
     const n = k === 'all' ? open.length : open.filter((t) => groupOf(t.kind) === k).length;
-    const b = el('button', '', label + (n ? ' ' + n : '')); b.setAttribute('aria-pressed', String(S.kind === k)); b.onclick = () => { S.kind = k; render(); }; seg.append(b);
+    const b = el('button', '', label + (n ? ' ' + n : '')); b.setAttribute('aria-pressed', String(S.kind === k)); b.onclick = () => { S.kind = k; localStorageSet('tr_closed', ''); render(); }; seg.append(b);
   });
   sec.append(seg);
   const card = el('div', 'card');
@@ -337,7 +343,7 @@ function trackerSection(list) {
     const tid = t.thread_id || t.threadId || (String(t.gmail_url || '').match(/#[a-z]+\/([0-9a-f]{10,})/i) || [])[1]; if (tid) r.onclick = () => openThread(tid, t.title);
     card.append(r);
   });
-  sec.append(card); return sec;
+  if (trOpen) sec.append(card); return sec;
 }
 
 function emailRow(x) {
