@@ -114,7 +114,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 13;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 14;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -366,8 +366,8 @@ function emailRow(x) {
   // ★ always important · ✓ track only (orders/invoices go on trackers) · ✗ not important (hidden everywhere)
   const BTN = [['important', 'star', '★', 'Always important: everything from this sender'],
                ['track', 'tick', '✓', 'Track only: hide their ordinary mail, keep orders, invoices and bills on trackers'],
-               ['not_important', 'cross', '✕', 'Not important: hide everything from this sender, trackers too']];
-  const SAID = { important: '★ Always important. The agent will learn this at 7am.', track: '✓ Track only: orders, invoices and bills still go on your trackers.', not_important: '✕ Not important: hidden from summary and trackers from 7am.' };
+               ['not_important', 'cross', '✕', 'Hide emails like this one from this sender (other kinds still come through)']];
+  const SAID = { important: '★ Always important. The agent will learn this at 7am.', track: '✓ Track only: orders, invoices and bills still go on your trackers.', not_important: '✕ Emails like this from this sender will be hidden. Anything different still comes through.' };
   const btns = BTN.map(([v, cls, icon, tip]) => { const b = el('button', 'fb ' + cls, icon); b.title = tip; b.setAttribute('aria-label', tip); b.setAttribute('aria-pressed', String(fb === v)); return b; });
   const set = async (v) => {
     if (S.feedback[key] && S.feedback[key].verdict === v) delete S.feedback[key];
@@ -464,7 +464,19 @@ async function showThread(id, title) {
       }
       body.append(box);
     });
-    if (unread) gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).catch(() => {});
+    // Opening an email no longer marks it read: Herman taps "Mark read" (top right) when he's done, or "Unread" to undo
+    let isUnread = unread > 0;
+    const ex = $('r-extra'); ex.style.visibility = 'visible';
+    const paint = () => { ex.textContent = isUnread ? 'Mark read' : 'Unread'; };
+    paint();
+    ex.onclick = async () => {
+      const makeUnread = !isUnread;
+      try {
+        await gmail(`threads/${id}/modify`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(makeUnread ? { addLabelIds: ['UNREAD'] } : { removeLabelIds: ['UNREAD'] }) });
+        isUnread = makeUnread; paint(); toast(isUnread ? 'Marked as unread' : 'Marked as read ✓');
+        [S.live, Array.isArray(S.results) ? S.results : null].forEach((list) => { const it = list && list.find((x) => x.id === id); if (it) it.unread = isUnread; });
+      } catch (e) { toast('Couldn\'t change it: ' + e.message); }
+    };
     // Reply (opens the Gmail app's compose screen with the reply filled in) and open the Gmail app
     const last = th.messages[th.messages.length - 1];
     const replyTo = hdr(last, 'reply-to') || hdr(last, 'from');
