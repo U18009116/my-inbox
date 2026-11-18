@@ -51,6 +51,8 @@ h2{font:800 21px/1.15 var(--head);text-transform:uppercase;letter-spacing:-.01em
 /* delivery timeline */
 .tl{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:10px}.tl i{height:5px;background:var(--fill);border-radius:3px}.tl i.on{background:var(--orange)}
 .tl-lb{display:flex;justify-content:space-between;color:var(--sub);font-size:11px;margin-top:4px}.tl-lb .now{color:var(--text);font-weight:600}
+/* notifications card */
+.notif{display:flex;gap:12px;align-items:center;padding:14px;margin-top:14px;border-left:4px solid var(--red)}
 /* cleaned up */
 .row.kv{justify-content:space-between;align-items:center}.row.kv b{font:800 20px/1 var(--head)}
 .small-btn{flex:none;align-self:center;padding:8px 10px;font-size:13px}.btn:disabled{opacity:.6}
@@ -153,7 +155,9 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 20;                          // shown at the bottom so Herman can see he has the newest copy
+const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
+const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
+const APP_VERSION = 21;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -209,6 +213,30 @@ async function loadDrafts() {
     const g = await gmail(`drafts/${dr.id}?format=metadata`); const msg = g.message || {};
     return { id: dr.id, to: hdr(msg, 'to'), subject: hdr(msg, 'subject'), snippet: decodeEntities(msg.snippet || ''), time: msg.internalDate ? when(msg.internalDate) : '' };
   }));
+}
+// Morning notifications from My Inbox (Web Push). The 7am agent sends them; this saves where to send them.
+function fromB64url(s) { const b = atob(s.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - s.length % 4) % 4)); return Uint8Array.from(b, (ch) => ch.charCodeAt(0)); }
+async function saveJsonToDrive(name, obj) {
+  const body = JSON.stringify(obj); let f = null; try { f = await driveFind(name); } catch (e) {}
+  if (f) { await api('https://www.googleapis.com/upload/drive/v3/files/' + f.id + '?uploadType=media', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body }); return; }
+  const make = async (parents) => {
+    const meta = { name, mimeType: 'application/json' }; if (parents) meta.parents = parents;
+    const fd = new FormData(); fd.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); fd.append('file', new Blob([body], { type: 'application/json' }));
+    return (await api('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: fd })).json();
+  };
+  try { const d = await driveFind(DRIVE_FOLDER, true); await make(d ? [d.id] : null); } catch (e) { await make(null); }
+}
+async function enablePush(btn) {
+  try {
+    if (btn) btn.disabled = true;
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Notifications are blocked. Allow them for this site in Chrome settings, then tap Turn on again.', 5000); if (btn) btn.disabled = false; return; }
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(PUSH_KEY) });
+    await saveJsonToDrive(PUSH_FILE, { subscription: sub.toJSON(), saved_at: new Date().toISOString() });
+    localStorageSet('push', '1'); toast('Notifications are on. Your 7am summary will come from My Inbox.', 4000); render();
+  } catch (e) { if (btn) btn.disabled = false; toast('Couldn\'t turn on notifications: ' + e.message, 5000); }
 }
 function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
 // True when the 7am run (05:00 UTC) has happened since this copy was saved
@@ -364,6 +392,14 @@ function nextUp(list) {
 
 function inboxTab(page, d, m, emails, trackers) {
   page.append(el('p', 'hint', S.checking ? 'Checking for new mail…' : 'Pull down to check for new mail' + (d.updated_at ? '. Sorted by the agent at ' + when(Date.parse(d.updated_at)) + '.' : '.')));
+
+  // Ask once to turn on morning notifications from My Inbox
+  if ('PushManager' in window && 'Notification' in window && !(Notification.permission === 'granted' && localStorageGet('push') === '1')) {
+    const nb = el('div', 'card notif'); const tx = el('div', 'main');
+    tx.append(el('div', 'from', 'Morning notifications'), el('p', 'prev', Notification.permission === 'denied' ? 'Blocked in Chrome. Allow notifications for this site, then tap Turn on.' : 'Get your 7am summary as a notification from My Inbox.'));
+    const b = el('button', 'btn small-btn', 'Turn on'); b.onclick = () => enablePush(b);
+    nb.append(tx, b); page.append(nb);
+  }
 
   // Featured: the next thing coming up
   const nx = nextUp(trackers);
