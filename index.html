@@ -93,7 +93,7 @@ const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googlea
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
-const APP_VERSION = 7;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 8;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -426,7 +426,11 @@ async function showThread(id, title) {
     // Find in Gmail app: copy a search for this email, then open the Gmail app so it can be pasted into Gmail's search
     const g = el('a', 'btn ghost', '🔍 Find in Gmail app'); g.style.cssText = 'flex:1;text-decoration:none';
     g.href = gmailLink('#all/' + id);
-    const findText = (addr ? 'from:' + addr + ' ' : '') + subj.replace(/^(re|fwd?):\s*/i, '');
+    // Exact search: sender + subject as a phrase + the day it arrived (one day either side), so only this email matches
+    const d0 = new Date(+last.internalDate), ymd = (d) => d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
+    const dayBefore = new Date(d0); dayBefore.setDate(d0.getDate() - 1); const dayAfter = new Date(d0); dayAfter.setDate(d0.getDate() + 1);
+    const cleanSubj = subj.replace(/^((re|fwd?|aw):\s*)+/i, '').replace(/"/g, '').trim();
+    const findText = [addr ? 'from:' + addr : '', cleanSubj ? 'subject:"' + cleanSubj + '"' : '', 'after:' + ymd(dayBefore), 'before:' + ymd(dayAfter)].filter(Boolean).join(' ');
     g.onclick = async (e) => {
       e.preventDefault();
       try { await navigator.clipboard.writeText(findText); toast('Copied. In Gmail, tap Search and paste.', 4000); } catch (err) { toast('Search Gmail for: ' + findText, 6000); }
