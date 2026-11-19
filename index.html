@@ -537,6 +537,10 @@ html[data-theme=graphite] .f-date{border-image:linear-gradient(180deg,transparen
 html[data-theme=graphite] .feature{box-shadow:0 18px 44px rgba(156,163,175,.28),0 8px 24px rgba(0,0,0,.5)!important}
 html[data-theme=graphite] .feature::after{background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'><path d='M0 80 L60 46 L110 70 L170 30 L230 72 L290 44 L350 74 L400 52 V120 H0Z' fill='%23374151' fill-opacity='.75'/><path d='M0 98 L80 70 L140 92 L210 64 L270 94 L340 72 L400 90 V120 H0Z' fill='%231f2937' fill-opacity='.85'/><path d='M0 112 L90 96 L170 110 L250 94 L330 108 L400 100 V120 H0Z' fill='%23ffffff'/></svg>") bottom/100% 100% no-repeat,radial-gradient(circle 20px at 76% 46%,rgba(255,255,255,.92) 94%,rgba(255,255,255,0) 100%),radial-gradient(circle 46px at 76% 46%,rgba(255,255,255,.25),rgba(255,255,255,0) 100%),linear-gradient(180deg,#4b5563,#d1d5db)}
 html[data-theme=graphite] .code-chip{background:rgba(156,163,175,.14);box-shadow:inset 0 0 0 1px rgba(156,163,175,.45)}html[data-theme=graphite] .code-chip small,html[data-theme=graphite] .ccard .tdate span{color:#d1d5db!important}
+/* v45: Received button on deliveries */
+.recv{display:inline-flex;align-self:flex-start;align-items:center;gap:6px;margin-top:12px;padding:8px 14px;border-radius:999px;background:var(--grad);color:#fff;font:600 13px/1 var(--body);box-shadow:0 4px 12px rgba(0,0,0,.3);transition:transform .15s var(--out)}
+.recv:active{transform:scale(.95)}
+.tcard.gone{transform:translateX(-110%)!important;opacity:0;transition:transform .25s var(--out),opacity .25s}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -560,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 44;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 45;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -835,7 +839,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 function openTrackers(list) {
   // Trackers stay until their date has passed, then drop off (ones without a date stay until done)
   const today = new Date(new Date().toDateString());
-  return list.filter((t) => (t.date && !isNaN(new Date(t.date))) ? !trackerOver(t) : !['delivered', 'paid', 'cancelled'].includes(t.status));
+  return list.filter((t) => !(S.feedback && S.feedback['recv:' + (trackerThread(t) || t.title)])) // Herman tapped Received
+    .filter((t) => (t.date && !isNaN(new Date(t.date))) ? !trackerOver(t) : !['delivered', 'paid', 'cancelled'].includes(t.status));
 }
 function trackerThread(t) { return t.thread_id || t.threadId || (String(t.gmail_url || '').match(/#[a-z]+\/([0-9a-f]{10,})/i) || [])[1]; }
 function nextUp(list) {
@@ -1024,6 +1029,17 @@ function trackerSection(list) {
       const tl = el('div', 'tl'); for (let i = 0; i < 3; i++) tl.append(el('i', i <= step ? 'on' : ''));
       const lb = el('div', 'tl-lb'); ['Ordered', t.status === 'ready_for_collection' ? 'Ready to collect' : 'On its way', 'Delivered'].forEach((s, i) => lb.append(el('span', i === step ? 'now' : '', s)));
       mm.append(tl, lb);
+      // Received: the parcel is here, so it leaves the trackers (the agent learns this at its next run)
+      const rc = el('span', 'recv', '✓ Received'); rc.setAttribute('role', 'button');
+      rc.onclick = async (e) => {
+        e.stopPropagation(); const key = 'recv:' + (trackerThread(t) || t.title);
+        S.feedback[key] = { verdict: 'received', thread_id: trackerThread(t) || '', from: t.from || '', title: t.title || '', at: new Date().toISOString(), processed: false };
+        localStorageSet('fb', JSON.stringify(S.feedback)); r.classList.add('gone');
+        setTimeout(() => { const y = window.scrollY; render(); window.scrollTo(0, y); }, 260);
+        toast('Marked as received');
+        try { await saveFeedback(); } catch (err) { toast('Saved on this phone; will sync when online'); }
+      };
+      mm.append(rc);
     }
     r.append(lead, mm, el('span', 'go', '›'));
     const tid = trackerThread(t); if (tid) r.onclick = () => (['ticket', 'booking'].includes(t.kind) ? openTicket(tid, t.title) : openThread(tid, t.title));
