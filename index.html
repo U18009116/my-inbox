@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 53;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 54;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1253,6 +1253,11 @@ async function search(q) {
     const toTerms = (s) => [...new Set((s.toLowerCase().match(/"[^"]+"|[a-z0-9][a-z0-9-]+/g) || []).map((t) => t.replace(/"/g, '')))].filter((t) => t.length > 2);
     const terms = toTerms(must + ' ' + w.join(' ')), thingTerms = toTerms(must);
     const kindTerms = toTerms(sq.groups.filter((g) => !sq.things.includes(g)).join(' ')).filter((t) => t.length > 3);
+    // Quick first look at sender and subject: drop forum digests, lift the right kind of document, so the right ones get read closely
+    S.meta = S.meta || {};
+    (await mapLimit(top.filter((id) => !S.meta[id]), 5, (id) => threadMeta(id).catch(() => null))).forEach((x) => { if (x) S.meta[x.id] = x; });
+    top.forEach((id) => { const m = S.meta[id]; if (!m) return; const head = (m.from + ' ' + m.title).toLowerCase(); let b = 0; if (/what happened in the last|digest|forum|newsletter|weekly|e-bulletin/.test(head)) b -= 12; if (kindTerms.some((x) => head.includes(x))) b += 3; if (terms.some((x) => head.includes(x))) b += 4; score.set(id, (score.get(id) || 0) + b); });
+    top.sort((a, b) => (score.get(b) - score.get(a)) || ((first.get(a) ?? 0) - (first.get(b) ?? 0)));
     if (terms.length || kindTerms.length) {
       const deep = top.slice(0, 15);
       const texts = await mapLimit(deep, 4, threadText);
