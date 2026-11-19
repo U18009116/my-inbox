@@ -560,7 +560,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 42;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 43;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1289,9 +1289,35 @@ function aboutPage() {
 }
 window.addEventListener('popstate', () => { if (S.sub === 'about' && $('reader').classList.contains('open')) { S.sub = null; settingsList(); return; } if ($('pdf') && !S.directPdf) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
 
+// Files saved on this phone so tickets and PDFs open instantly next time (even without signal)
+function fileKey(msgId, name) { return 'https://my-inbox.local/att/' + msgId + '/' + encodeURIComponent(name || 'file'); }
+async function cachedFile(key) { try { const c = await caches.open('mi-files'); const r = await c.match(key); return r ? new Uint8Array(await r.arrayBuffer()) : null; } catch (e) { return null; } }
+async function saveFile(key, bytes) { try { const c = await caches.open('mi-files'); await c.put(key, new Response(bytes)); } catch (e) {} }
+// Fetch ticket PDFs quietly in the background so tapping a ticket shows it straight away
+async function prefetchTickets() {
+  if (!S.token || Date.now() >= S.exp || !S.data) return;
+  const list = openTrackers(S.data.trackers || []).filter((t) => ['ticket', 'booking'].includes(t.kind)).slice(0, 4);
+  for (const t of list) {
+    const id = trackerThread(t); if (!id) continue;
+    try {
+      const hit = JSON.parse(localStorageGet('tk_' + id) || 'null');
+      if (hit && await cachedFile(fileKey(hit.msgId, hit.name))) continue;
+      const th = await gmail('threads/' + id + '?format=full');
+      for (let i = th.messages.length - 1; i >= 0; i--) {
+        const m = th.messages[i]; const out = { atts: [] }; walk(m.payload, out);
+        const pdf = out.atts.find((a) => /pdf/i.test(a.mime || '') || /\.pdf$/i.test(a.name || ''));
+        if (pdf && pdf.id) { const att = await gmail('messages/' + m.id + '/attachments/' + pdf.id); await saveFile(fileKey(m.id, pdf.name), b64(att.data)); localStorageSet('tk_' + id, JSON.stringify({ msgId: m.id, name: pdf.name })); break; }
+      }
+    } catch (e) {}
+  }
+  try { if (window.pdfjsLib && !S.pdfWarm) { S.pdfWarm = true; new pdfjsLib.PDFWorker(); } } catch (e) {} // warm up the PDF viewer
+}
+setTimeout(prefetchTickets, 5000);
 // Tickets: open the PDF ticket straight away (newest PDF in the thread); no PDF means the email opens instead
 async function openTicket(id, title) {
   openReader(title || 'Ticket'); $('r-body').replaceChildren(el('div', 'spin'));
+  // Already saved on this phone? Then it opens instantly
+  try { const hit = JSON.parse(localStorageGet('tk_' + id) || 'null'); if (hit && await cachedFile(fileKey(hit.msgId, hit.name))) { S.directPdf = true; await openAttachment(hit.msgId, { name: hit.name, mime: 'application/pdf' }); return; } } catch (e) {}
   try {
     const th = await gmail('threads/' + id + '?format=full');
     for (let i = th.messages.length - 1; i >= 0; i--) {
@@ -1300,6 +1326,7 @@ async function openTicket(id, title) {
       if (pdf) {
         S.directPdf = true; // Back closes the ticket instead of showing the email
         gmail('threads/' + id + '/modify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).then(() => setUnread(id, false)).catch(() => {});
+        localStorageSet('tk_' + id, JSON.stringify({ msgId: m.id, name: pdf.name }));
         await openAttachment(m.id, pdf); return;
       }
     }
@@ -1384,8 +1411,9 @@ async function openAttachment(msgId, a) {
   $('r-title').textContent = a.name;
   const body = $('r-body'); body.replaceChildren(el('div', 'spin'));
   try {
-    const data = a.id ? (await gmail(`messages/${msgId}/attachments/${a.id}`)).data : a.data;
-    const bytes = b64(data);
+    const key = fileKey(msgId, a.name); let bytes = await cachedFile(key); // saved on the phone: no download
+    const data = bytes ? null : a.id ? (await gmail(`messages/${msgId}/attachments/${a.id}`)).data : a.data;
+    if (!bytes) { bytes = b64(data); saveFile(key, bytes.slice()); }
     const blob = new Blob([bytes], { type: a.mime || 'application/octet-stream' });
     const file = new File([blob], a.name, { type: blob.type });
     const ex = $('r-extra'); ex.style.visibility = 'visible';
@@ -1397,7 +1425,7 @@ async function openAttachment(msgId, a) {
     if (/pdf/i.test(a.mime) || /\.pdf$/i.test(a.name)) {
       const box = el('div'); box.id = 'pdf'; body.append(box);
       const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
-      const w = Math.min(body.clientWidth - 20, 900), dpr = window.devicePixelRatio || 1;
+      const w = Math.min(body.clientWidth - 20, 900), dpr = Math.min(2, window.devicePixelRatio || 1);
       for (let i = 1; i <= pdf.numPages; i++) {
         const p = await pdf.getPage(i); const v0 = p.getViewport({ scale: 1 }); const v = p.getViewport({ scale: (w / v0.width) * dpr });
         const c = el('canvas'); c.width = v.width; c.height = v.height; c.style.width = w + 'px'; box.append(c);
