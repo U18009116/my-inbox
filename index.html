@@ -499,6 +499,12 @@ body::before{opacity:.55}
 .tab[aria-current=true]::after{background:#ffffff;box-shadow:0 4px 12px rgba(0,0,0,.4)}
 .tab[aria-current=true] svg{color:#0b0f1a}
 .tab[aria-current=true]{color:#0b0f1a}
+/* v38: readable read-mail on white, dock icons always visible */
+.card .row.read .from,.card .row.read .subj{color:#6f788a}.card .row.read .prev{color:#8f97a7}.card .row.read .av{opacity:.75}
+.tcard.read .tname{color:#6f788a!important}.tcard.read .tsub{color:#7d8698}.tcard.read .tstatus,.tcard.read .tmeta{color:#9aa2b1}
+.ccard.read .code-big{color:#6f788a!important}
+.tabbar{background:rgba(16,18,24,.9)!important}
+.tab{color:#c4cad6}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -522,7 +528,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 37;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 38;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
