@@ -135,6 +135,54 @@ h2{font:800 21px/1.15 var(--head);text-transform:uppercase;letter-spacing:-.01em
 .ptr{position:fixed;top:0;left:0;right:0;display:flex;justify-content:center;pointer-events:none;z-index:15;transform:translateY(-70px);transition:transform .25s}
 .ptr div{margin-top:calc(10px + env(safe-area-inset-top));background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:8px 16px;font-size:14px;font-weight:600;color:var(--red)}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#fff;color:#000;padding:10px 16px;border-radius:var(--r);font-size:14px;font-weight:500;z-index:20;display:none;max-width:90vw}
+/* v24 finish: sentence case, fewer boxes, red only for what needs you, one bold element (the Next up date) */
+h2,.from,.tname,.msg h3,.imp-tx b,.bar .t,.loading-text{text-transform:none}
+h2{font:700 22px/1.2 var(--head);letter-spacing:-.02em;margin:32px 0 6px}
+.brand{font:800 19px/1 var(--head);font-style:normal;letter-spacing:-.03em;text-transform:none}
+.livepill{border-radius:999px;font-variant-numeric:tabular-nums;padding:6px 11px}
+.hint{font-size:13px;color:#8a8a8a}
+.card{background:transparent;border:0;border-radius:0;overflow:visible}
+.row{padding:14px 2px}
+.row+.row{border-top:1px solid #1d1d1d}
+.av{background:#1c1c1e!important;color:#f2f2f2;font:600 16px/1 var(--body);border-radius:50%}
+.row.read .av{color:#5c5c5c}
+.from{font:600 15px/1.25 var(--body);letter-spacing:0}
+.subj{font-weight:500;color:#e6e6e6}
+.row.read .subj{color:#7a7a7a}
+.dot{left:-10px;top:21px;bottom:auto;width:6px;height:6px;border-radius:50%}
+.sec-head{margin:32px 0 6px}
+.chev{color:#6b6b6b}
+.empty{padding:18px 2px}
+.feature{display:grid;grid-template-columns:auto 1fr;column-gap:18px;align-items:center;background:#111112;border:0;border-radius:18px;padding:20px 18px}
+.f-kicker{display:none}
+.f-date{grid-row:1/span 4;display:flex;flex-direction:column;align-items:center;padding-right:18px;border-right:2px solid var(--k,var(--red))}
+.f-date b{font:800 58px/.9 var(--head);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+.f-date small{color:#9a9a9a;font-size:13px;margin-top:6px}
+.f-title{grid-column:2;font:800 23px/1.15 var(--head);font-style:normal;text-transform:none;letter-spacing:-.02em;margin:0 0 8px;padding-right:72px}
+.f-when,.f-sub{grid-column:2}
+.f-when{font-weight:500;color:#d6d6d6;font-size:15px}
+.f-count{border-radius:999px;background:transparent;color:var(--red);border:1px solid #4a1a16;top:18px;right:16px}
+.seg button{border-radius:999px;border-color:#262626;color:#9a9a9a}
+.tlist{gap:0}
+.tcard{background:transparent;border:0;border-bottom:1px solid #1d1d1d;border-radius:0;padding:14px 2px}
+.tdate{background:#141414;border-top:0;border-left:3px solid var(--k,var(--red));border-radius:12px;width:62px;min-height:62px}
+.tdate b{font:800 26px/1 var(--head);font-variant-numeric:tabular-nums}
+.tname{font:650 17px/1.25 var(--head);letter-spacing:-.01em}
+.tstatus{color:#8a8a8a}
+.go{background:transparent;color:#5c5c5c;font-size:24px;top:50%;bottom:auto;transform:translateY(-50%);right:2px}
+.tl i.on{background:var(--k,var(--orange))}
+.search{border:0;background:#141414;border-radius:14px}
+.notif{border:0;border-radius:16px;background:#141414;padding:14px 16px}
+.row.kv b{font:700 22px/1 var(--head);font-variant-numeric:tabular-nums}
+.btn{border-radius:12px}
+.btn.ghost{background:#1c1c1e}
+.tabbar{background:rgba(0,0,0,.92);border-top:1px solid #1a1a1a}
+.tab{color:#8a8a8a}
+.tab[aria-current=true]{color:#fff}
+.tab[aria-current=true]::before{content:'';position:absolute;top:-9px;width:20px;height:2px;border-radius:2px;background:var(--red)}
+.badge{border-radius:999px;min-width:17px;text-align:center;font-variant-numeric:tabular-nums}
+.msg{background:#111112;border:0;border-radius:16px}
+.imp{border-top:1px solid #1d1d1d}
 </style>
 </head>
 <body>
@@ -157,7 +205,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 23;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 24;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -422,6 +470,7 @@ function inboxTab(page, d, m, emails, trackers) {
     const k = KINDS[nx.kind] || KINDS.delivery; const dt = new Date(nx.date);
     const days = Math.round((dt - new Date(new Date().toDateString())) / 864e5);
     const f = el('button', 'feature'); f.style.setProperty('--k', k[1]);
+    const fd = el('span', 'f-date'); fd.append(el('b', '', String(dt.getDate())), el('small', '', dt.toLocaleDateString([], { month: 'short' }))); f.append(fd);
     f.append(el('span', 'f-count', days <= 0 ? 'Today' : days === 1 ? 'Tomorrow' : 'In ' + days + ' days'));
     f.append(el('span', 'f-kicker', 'Next up: ' + k[3].toLowerCase()));
     f.append(el('span', 'f-title', nx.title || k[3]));
