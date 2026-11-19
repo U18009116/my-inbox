@@ -452,6 +452,11 @@ body::before{background:radial-gradient(38% 48% at 28% 32%,rgba(31,111,255,.36),
 .tab[aria-current=true] svg{filter:none;color:#fff}
 .badge{top:1px}
 .wrap{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+/* v36: scenic band on top of the Next up card, text below it */
+.feature{padding-top:108px;align-items:start}
+.feature::after{top:0;bottom:auto;height:120px;opacity:.95;-webkit-mask-image:linear-gradient(#000 55%,transparent);mask-image:linear-gradient(#000 55%,transparent)}
+.f-count{top:auto!important;right:auto!important}
+.f-go{top:16px;bottom:auto!important}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -475,7 +480,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 35;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 36;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
