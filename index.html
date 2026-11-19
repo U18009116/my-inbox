@@ -157,7 +157,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 22;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 23;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -238,10 +238,21 @@ async function enablePush(btn) {
     localStorageSet('push', '1'); toast('Notifications are on. Your 7am summary will come from My Inbox.', 4000); render();
   } catch (e) { if (btn) btn.disabled = false; toast('Couldn\'t turn on notifications: ' + e.message, 5000); }
 }
+// Fetch the newest summary, trackers, read/unread and drafts, then redraw where Herman is
+async function refreshData() {
+  if (S.refreshing) return;
+  if (!S.token || Date.now() >= S.exp) { goSignIn(true); return; } // quick Google sign-in, comes straight back to this tab
+  S.refreshing = true;
+  try { await loadData(); } catch (e) {}
+  S.refreshing = false;
+  if (!$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+}
 function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
 // True when the 7am run (05:00 UTC) has happened since this copy was saved
 function needsFresh(d) {
-  const run = new Date(); run.setUTCHours(5, 20, 0, 0); if (run > new Date()) run.setUTCDate(run.getUTCDate() - 1);
+  // Agent runs at 07:00, 13:00 and 17:00 SAST (05:00, 11:00, 15:00 UTC): find the latest one that has finished
+  const now = new Date(); const runs = [5, 11, 15].map((h) => { const r = new Date(now); r.setUTCHours(h, 20, 0, 0); return r; }).filter((r) => r <= now);
+  const run = runs.length ? runs[runs.length - 1] : (() => { const r = new Date(now); r.setUTCDate(r.getUTCDate() - 1); r.setUTCHours(15, 20, 0, 0); return r; })();
   return !d || !d.updated_at || Date.parse(d.updated_at) < run.getTime();
 }
 function loader(text) {
@@ -330,9 +341,11 @@ function signInScreen(msg) {
 }
 
 async function start() {
-  const app = $('app'); app.replaceChildren(loader());
+  // Show the last saved copy straight away (no waiting), then fetch the newest quietly in the background
+  const saved = cachedData();
+  if (saved) { S.data = saved; S.feedback = cachedFeedback(); render(); } else $('app').replaceChildren(loader());
   await loadData();
-  render();
+  { const y = window.scrollY; render(); window.scrollTo(0, y); }
   // Notifications allowed but the phone's address never got saved (e.g. sign-in interrupted it): finish quietly now
   if ('PushManager' in window && 'Notification' in window && Notification.permission === 'granted' && localStorageGet('push') !== '1') enablePush(null);
 }
@@ -375,7 +388,7 @@ function render() {
   TABS.forEach(([k, label]) => {
     const b = el('button', 'tab'); b.setAttribute('aria-current', String(S.tab === k)); b.innerHTML = ICON[k]; b.append(el('span', '', label));
     const n = k === 'inbox' ? unreadN : k === 'trackers' ? trUnread : 0; if (n) b.append(el('i', 'badge', String(n)));
-    b.onclick = () => { S.tab = k; localStorageSet('tab', k); render(); window.scrollTo(0, 0); };
+    b.onclick = () => { S.tab = k; localStorageSet('tab', k); render(); window.scrollTo(0, 0); if (k !== 'search') refreshData(); };
     nav.append(b);
   });
   app.append(nav);
@@ -393,7 +406,7 @@ function nextUp(list) {
 }
 
 function inboxTab(page, d, m, emails, trackers) {
-  page.append(el('p', 'hint', S.checking ? 'Checking for new mail…' : 'Pull down to check for new mail' + (d.updated_at ? '. Sorted by the agent at ' + when(Date.parse(d.updated_at)) + '.' : '.')));
+  page.append(el('p', 'hint', S.checking ? 'Checking for new mail…' : 'Pull down to refresh everything' + (d.updated_at ? '. Sorted by the agent at ' + when(Date.parse(d.updated_at)) + '.' : '.')));
 
   // Ask once to turn on morning notifications from My Inbox
   if ('PushManager' in window && 'Notification' in window && !(Notification.permission === 'granted' && localStorageGet('push') === '1')) {
@@ -603,6 +616,7 @@ async function liveCheck() {
   S.checking = true; S.tab = 'inbox'; render();
   const go = () => { const s = $('new-mail'); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
   go();
+  try { await loadData(); } catch (e) {}
   try { S.live = await listThreads('in:inbox is:unread -category:promotions -category:social -category:forums newer_than:14d', 25); }
   catch (e) { S.live = null; toast('Couldn\'t reach Gmail: ' + e.message, 4000); }
   S.checking = false; render(); go();
@@ -761,7 +775,7 @@ async function openAttachment(msgId, a) {
     dy = e.touches[0].clientY - y0;
     if (dy <= 0) { reset(); return; }
     P.style.transition = 'none'; P.style.transform = 'translateY(' + (Math.min(dy * 0.5, 80) - 70) + 'px)';
-    T.textContent = dy > 140 ? '↻ Release to check new mail' : '↓ Pull to check new mail';
+    T.textContent = dy > 140 ? '↻ Release to refresh' : '↓ Pull to check new mail';
   }, { passive: true });
   addEventListener('touchend', () => {
     if (y0 == null) return; y0 = null; P.style.transition = '';
