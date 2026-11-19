@@ -560,7 +560,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 41;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 42;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -875,7 +875,7 @@ function inboxTab(page, d, m, emails, trackers) {
     f.append(el('span', 'f-when', dt.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) + (nx.time ? ', ' + nx.time : '')));
     const sub = [nx.place, nx.from].filter(Boolean).join(', '); if (sub) f.append(el('span', 'f-sub', sub));
     f.append(el('span', 'f-go', '→'));
-    const tid = trackerThread(nx); if (tid) f.onclick = () => openThread(tid, nx.title);
+    const tid = trackerThread(nx); if (tid) f.onclick = () => (['ticket', 'booking'].includes(nx.kind) ? openTicket(tid, nx.title) : openThread(tid, nx.title));
     page.append(f);
   }
 
@@ -1031,7 +1031,7 @@ function trackerSection(list) {
       mm.append(tl, lb);
     }
     r.append(lead, mm, el('span', 'go', '›'));
-    const tid = trackerThread(t); if (tid) r.onclick = () => openThread(tid, t.title);
+    const tid = trackerThread(t); if (tid) r.onclick = () => (['ticket', 'booking'].includes(t.kind) ? openTicket(tid, t.title) : openThread(tid, t.title));
     listEl.append(r);
   });
   if (trOpen) sec.append(listEl); return sec;
@@ -1136,7 +1136,7 @@ function walk(part, out) {
 function openReader(title) { $('r-title').textContent = title || ''; $('r-extra').style.visibility = 'hidden'; $('reader').classList.remove('closing'); $('reader').classList.add('open'); history.pushState({ r: 1 }, ''); }
 function closeReader() {
   // Slide the email away to the right, then redraw the list underneath
-  S.sub = null; const rd = $('reader'); if (!rd.classList.contains('open')) return;
+  S.sub = null; S.directPdf = false; const rd = $('reader'); if (!rd.classList.contains('open')) return;
   rd.classList.add('closing');
   setTimeout(() => {
     if (!rd.classList.contains('closing')) return;
@@ -1287,8 +1287,25 @@ function aboutPage() {
   };
   box.append(note, btn); $('r-body').replaceChildren(box);
 }
-window.addEventListener('popstate', () => { if (S.sub === 'about' && $('reader').classList.contains('open')) { S.sub = null; settingsList(); return; } if ($('pdf')) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
+window.addEventListener('popstate', () => { if (S.sub === 'about' && $('reader').classList.contains('open')) { S.sub = null; settingsList(); return; } if ($('pdf') && !S.directPdf) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
 
+// Tickets: open the PDF ticket straight away (newest PDF in the thread); no PDF means the email opens instead
+async function openTicket(id, title) {
+  openReader(title || 'Ticket'); $('r-body').replaceChildren(el('div', 'spin'));
+  try {
+    const th = await gmail('threads/' + id + '?format=full');
+    for (let i = th.messages.length - 1; i >= 0; i--) {
+      const m = th.messages[i]; const out = { atts: [] }; walk(m.payload, out);
+      const pdf = out.atts.find((a) => /pdf/i.test(a.mime || '') || /\.pdf$/i.test(a.name || ''));
+      if (pdf) {
+        S.directPdf = true; // Back closes the ticket instead of showing the email
+        gmail('threads/' + id + '/modify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ removeLabelIds: ['UNREAD'] }) }).then(() => setUnread(id, false)).catch(() => {});
+        await openAttachment(m.id, pdf); return;
+      }
+    }
+  } catch (e) {}
+  await showThread(id, title);
+}
 async function openThread(id, title) { openReader(''); await showThread(id, title); }
 async function showThread(id, title) {
   showThread._last = [id, title];
