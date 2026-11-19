@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 47;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 48;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1119,7 +1119,7 @@ const SEARCH_KINDS = [
   [/\b(tickets?|kaartjies?|bookings?|besprekings?|reservations?)\b/gi, '{ticket tickets booking e-ticket reservation kaartjie}', 'tickets and bookings'],
   [/\b(certificates?|sertifikate?|diplomas?|degree|graduation|gradeplegtigheid)\b/gi, '{certificate sertifikaat diploma graduation degree}', 'certificates'],
   [/\b(orders?|deliver(?:y|ies)|parcels?|packages?|courier|shipped|bestellings?|aflewerings?|pakkies?)\b/gi, '{order shipped delivery delivered parcel courier tracking}', 'orders and deliveries'],
-  [/\b(codes?|otps?|pins?|verification|passwords?|wagwoord)\b/gi, '{code otp verification pin password}', 'security codes'],
+  [/\b(security|sekuriteit|codes?|otps?|pins?|verification|passwords?|wagwoord|kodes?)\b/gi, '{code otp verification pin password}', 'security codes'],
   [/\b(flights?|boarding|itinerary|vlugte?)\b/gi, '{flight boarding itinerary airline}', 'flights'],
   [/\b(bank|banking)\b/gi, '{bank fnb absa capitec nedbank investec "standard bank" tymebank}', 'banking'],
   [/\b(tax|sars|belasting|efiling)\b/gi, '{sars tax efiling belasting}', 'tax'],
@@ -1186,6 +1186,8 @@ async function search(q) {
     qs.push([2, base + ' from:' + w[0] + (w.length > 1 ? ' ' + w.slice(1).join(' ') : '')]);
   } else if (base) qs.push([3, base]);
   else qs.push([3, q]);
+  // Adverts and social mail only rank low (one fallback search), unless Herman is looking for adverts
+  if (!/\b(adverts?|ads?|promos?|promotions?|specials?|deals?|sales?|aanbiedings?|nuusbriewe?|newsletters?)\b/i.test(q)) { qs.forEach((x) => { x[1] += ' -category:promotions -category:social -from:me'; }); qs.push([1, (w.length ? w.join(' ') + ' ' : '') + (base || (w.length ? '' : q))]); }
   S.searchNote = 'Looked for ' + ([sq.note, w.length ? '"' + w.join(' ') + '"' : ''].filter(Boolean).join(', ') || '"' + q + '"');
   try {
     const lists = await Promise.all(qs.map(([wt, qq]) => gmail('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id)]).catch(() => [wt, []])));
