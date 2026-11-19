@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 55;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 56;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1228,11 +1228,13 @@ async function search(q) {
   S.results = 'loading'; render();
   const sq = smartQuery(q), base = sq.parts.concat(sq.groups).join(' '), only = sq.parts.join(' '), w = sq.words;
   const qs = [];
+  const wv = (x) => [...new Set([x, x + 's', x + 'es', x.replace(/(es|s)$/, '')])].filter((y) => y.length > 1); // belt = belts
+  const W = w.map((x) => { const v = wv(x); return v.length > 1 ? '{' + v.join(' ') + '}' : x; }), WO = '{' + w.flatMap(wv).join(' ') + '}';
   if (w.length) {
-    qs.push([3, base + ' ' + w.join(' ')]);
-    qs.push([2, base + ' subject:(' + w.join(' ') + ')']);
-    if (w.length > 1) qs.push([4, base + ' {' + w.join(' ') + '}']);
-    qs.push([3, only + ' {' + w.join(' ') + '}']); // any email with any of his own words (product names like Daiwa)
+    qs.push([3, base + ' ' + W.join(' ')]);
+    qs.push([2, base + ' subject:(' + W.join(' ') + ')']);
+    if (w.length > 1) qs.push([4, base + ' ' + WO]);
+    qs.push([3, only + ' ' + WO, 'w']); // any email with any of his own words (product names like Daiwa)
     qs.push([2, only + ' has:attachment {' + w.map((x) => 'filename:' + x).join(' ') + '}']);
     qs.push([2, base + ' from:' + w[0] + (w.length > 1 ? ' ' + w.slice(1).join(' ') : '')]);
   } else if (base) qs.push([3, base]);
@@ -1240,13 +1242,14 @@ async function search(q) {
   // When he names a thing (aircon, MTN...), every strong match must mention it
   const must = sq.things.join(' ');
   if (must) qs.push([6, base]);
-  sq.files.forEach((f) => { if (w.length || must) qs.push([10, only + ' ' + f + ' ' + must + (w.length ? ' {' + w.join(' ') + '}' : '')]); qs.push([(w.length || must) ? 3 : 10, only + ' ' + f]); });
+  sq.files.forEach((f) => { if (w.length || must) qs.push([10, only + ' ' + f + ' ' + must + (w.length ? ' ' + WO : '')]); qs.push([(w.length || must) ? 3 : 10, only + ' ' + f]); });
   if (sq.groups.length) qs.push([2, only + ' has:attachment ' + sq.groups.join(' ')]);
   // Adverts, social mail and the agent's own summaries rank low (one fallback search), unless he is looking for adverts
   if (!/\b(adverts?|ads?|promos?|promotions?|specials?|deals?|sales?|aanbiedings?|nuusbriewe?|newsletters?)\b/i.test(q)) { qs.forEach((x) => { x[1] += ' -category:promotions -category:social -subject:"need you" -subject:"needs you" -subject:"all clear"'; }); qs.push([1, (w.length ? w.join(' ') + ' ' : '') + (base || (w.length ? '' : q))]); }
   S.searchNote = 'Looked for ' + ([sq.note, w.length ? '"' + w.join(' ') + '"' : ''].filter(Boolean).join(', ') || '"' + q + '"');
   try {
-    const lists = await mapLimit(qs, 3, ([wt, qq]) => gq('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id)]).catch(() => [wt, []]));
+    const lists = await mapLimit(qs, 3, ([wt, qq, fl]) => gq('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id), fl]).catch(() => [wt, [], fl]));
+    const wordIds = lists.filter((l) => l[2] === 'w').flatMap((l) => l[1]);
     const score = new Map(), first = new Map(); let n = 0;
     lists.forEach(([wt, ids]) => ids.forEach((id) => { score.set(id, (score.get(id) || 0) + wt); if (!first.has(id)) first.set(id, n++); }));
     let top = [...score.keys()].sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).slice(0, 25);
@@ -1261,7 +1264,7 @@ async function search(q) {
     top.forEach((id) => { const m = S.meta[id]; if (!m) return; const head = (m.from + ' ' + m.title).toLowerCase(); let b = 0; if (/what happened in the last|digest|forum|newsletter|weekly|e-bulletin/.test(head)) b -= 12; if (kindTerms.some((x) => head.includes(x))) b += 3; if (terms.some((x) => head.includes(x))) b += 4; score.set(id, (score.get(id) || 0) + b); });
     top.sort((a, b) => (score.get(b) - score.get(a)) || ((first.get(a) ?? 0) - (first.get(b) ?? 0)));
     if (terms.length || kindTerms.length) {
-      const deep = top.slice(0, 15);
+      const deep = [...new Set(top.slice(0, 12).concat(wordIds.slice(0, 8)))]; // emails with his own words are always read closely
       const texts = await mapLimit(deep, 4, threadText);
       deep.forEach((id, i) => {
         const t = texts[i]; if (!t) return; let bonus = 0;
@@ -1271,12 +1274,12 @@ async function search(q) {
           for (let k = 0; p >= 0 && k < 30; k++) { if (/r ?\d[\d ,]*[.,]\d\d/.test(t.slice(p, p + 140))) { bonus += 8; break; } p = t.indexOf(term, p + term.length); } // next to a price, like a line on a receipt
         }
         if (thingTerms.length && !thingTerms.some((x) => t.includes(x))) bonus -= 6; // the thing he named isn't really in it
-        if (w.length) { const hit = w.filter((x) => wordIn(x, t)).length; bonus += hit * 5; if (!hit) bonus -= 15; } // his own words (e.g. Daiwa, 3M) must be in it; more of them is better
+        if (w.length) { const hit = w.filter((x) => wv(x).some((y) => wordIn(y, t))).length; bonus += hit * 5; if (!hit) bonus -= 15; } // his own words (e.g. Daiwa, 3M) must be in it; more of them is better
         if (kindTerms.some((x) => t.slice(0, 160).includes(x))) bonus += 3; // the kind of document is in the subject
         if (/what happened in the last|digest|forum|newsletter|weekly|e-bulletin/.test(t.slice(0, 300))) bonus -= 12; // forum digests and newsletters
         score.set(id, (score.get(id) || 0) + bonus);
       });
-      top = deep.sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).concat(top.slice(15));
+      top = deep.sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).concat(top.filter((id) => !deep.includes(id)));
     }
     top = top.slice(0, 20);
     S.meta = S.meta || {};
@@ -1285,7 +1288,7 @@ async function search(q) {
     S.results = top.map((id) => S.meta[id]).filter(Boolean);
     // Be honest when a word wasn't found anywhere, e.g. No email mentions "weightsling"
     const best = S.textCache && top.length ? S.textCache[top[0]] : '';
-    const missing = best ? w.filter((x) => !wordIn(x, best)) : [];
+    const missing = best ? w.filter((x) => !wv(x).some((y) => wordIn(y, best))) : [];
     if (missing.length) S.searchNote += '. No email mentions "' + missing.join('", "') + '", so these are the closest matches';
   } catch (e) { S.results = []; toast('Search failed: ' + e.message); }
   render();
