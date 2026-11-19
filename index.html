@@ -421,6 +421,37 @@ body::before{background:radial-gradient(38% 48% at 28% 32%,rgba(31,111,255,.36),
 .gear{color:#a9d1ff}
 .seg button[aria-pressed=true]{box-shadow:0 6px 18px rgba(31,111,255,.35)}
 .ccard .tdate span{color:#7fb8ff!important}
+/* v35 merge: greeting, pill search, quick tiles, scenic Next up card, round icon dock, softer bigger corners */
+.hello{display:flex;align-items:center;gap:12px;margin:18px 2px 14px}
+.hello-x{flex:1;min-width:0}
+.hello-t{font:650 28px/1.1 var(--head);letter-spacing:-.04em;margin:0;text-transform:none;font-style:normal}
+.hello-s{margin:6px 0 0;color:var(--sub);font-size:14px}
+.hello-av{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font:600 18px/1 var(--head);color:#fff;background:var(--grad);box-shadow:0 0 0 3px rgba(255,255,255,.08),0 8px 20px rgba(31,111,255,.4)}
+.hsearch{display:flex;align-items:center;gap:10px;width:100%;padding:8px 8px 8px 18px;border-radius:999px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.09);color:#8a90a8;font-size:15px;text-align:left}
+.hsearch svg{width:20px;height:20px;flex:none}
+.hs-go{margin-left:auto;width:38px;height:38px;border-radius:50%;background:var(--grad);display:grid;place-items:center;color:#fff;font-size:18px;box-shadow:0 6px 16px rgba(31,111,255,.4)}
+.qtiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0 2px}
+.qtile{display:flex;flex-direction:column;align-items:center;gap:7px;padding:12px 4px 11px;border-radius:20px;background:rgba(255,255,255,.04);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);transition:transform .15s var(--out)}
+.qtile:active{transform:scale(.95)}
+.qi{width:46px;height:46px;border-radius:16px;display:grid;place-items:center;font-size:22px;background:linear-gradient(160deg,rgba(255,255,255,.15),rgba(255,255,255,.03));box-shadow:inset 0 1px 0 rgba(255,255,255,.16),0 6px 14px rgba(0,0,0,.45)}
+.ql{font-size:12px;color:#c9d2e8}
+.qn{font:500 12px/1 var(--mono);color:#7fb8ff}
+.card,.notif,.tcard,.search,.impbox,.set-row{border-radius:22px}
+.feature{border-radius:28px;min-height:196px;padding:22px 20px 26px;overflow:hidden}
+.feature::after{content:"";position:absolute;left:0;right:0;bottom:0;height:64%;pointer-events:none;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'><path d='M0 78 L55 42 L105 68 L165 18 L225 62 L285 30 L345 66 L400 40 V120 H0Z' fill='%231f6fff' fill-opacity='.38'/><path d='M0 94 L70 62 L130 88 L200 52 L262 86 L330 58 L400 82 V120 H0Z' fill='%233fb2ff' fill-opacity='.22'/><path d='M0 108 L90 86 L160 102 L240 82 L320 100 L400 90 V120 H0Z' fill='%23000' fill-opacity='.5'/></svg>") bottom/100% 100% no-repeat;opacity:.6;animation:none;transform:none}
+.feature>*{position:relative;z-index:1}
+.f-go{position:absolute!important;right:16px;bottom:16px;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#fff;color:#0b1220;font:600 20px/1 var(--body);box-shadow:0 8px 18px rgba(0,0,0,.45)}
+.btn{border-radius:999px}
+.tdate{border-radius:18px;width:64px;min-height:64px}
+.go{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.09)!important;display:grid;place-items:center;color:#fff!important;font-size:18px!important;right:12px!important}
+.tbody{padding-right:40px}
+.tabbar{border-radius:999px;padding:7px 10px;left:22px;right:22px}
+.tab{height:48px;justify-content:center}
+.tab>span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tab[aria-current=true]::after{top:50%;bottom:auto;left:50%;right:auto;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--grad);box-shadow:0 6px 18px rgba(31,111,255,.5)}
+.tab[aria-current=true] svg{filter:none;color:#fff}
+.badge{top:1px}
+.wrap{padding-bottom:calc(110px + env(safe-area-inset-bottom))}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -444,7 +475,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 34;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 35;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -728,6 +759,23 @@ function nextUp(list) {
 }
 
 function inboxTab(page, d, m, emails, trackers) {
+  // Greeting with a round avatar, a pill search and quick tiles into the trackers
+  const hr = new Date().getHours(); const un = emails.filter((x) => isUnread(x.id || x.thread_id)).length;
+  const hello = el('section', 'hello'); const hx = el('div', 'hello-x');
+  hx.append(el('h1', 'hello-t', (hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening') + ', Herman'), el('p', 'hello-s', un ? un + (un === 1 ? ' email needs' : ' emails need') + ' a look' : 'You are all caught up'));
+  const av = el('button', 'hello-av', 'H'); av.setAttribute('aria-label', 'Settings'); av.onclick = openSettings;
+  hello.append(hx, av); page.append(hello);
+  const hs = el('button', 'hsearch'); hs.innerHTML = ICON.search; hs.append(el('span', '', 'Search your email'), el('span', 'hs-go', '→'));
+  hs.onclick = () => { S.tab = 'search'; localStorageSet('tab', 'search'); render(); window.scrollTo(0, 0); };
+  page.append(hs);
+  const opn = openTrackers(trackers); const tiles = el('div', 'qtiles');
+  [['code', '🔑', 'Codes', (S.codes || []).length], ['delivery', '📦', 'Deliveries'], ['ticket', '🎟️', 'Tickets'], ['bill', '🧾', 'Bills']].forEach(([k, ic, label, n]) => {
+    if (n === undefined) n = opn.filter((t) => groupOf(t.kind) === k).length;
+    const b = el('button', 'qtile'); b.append(el('span', 'qi', ic), el('span', 'ql', label), el('b', 'qn', String(n)));
+    b.onclick = () => { S.tab = 'trackers'; S.kind = k; localStorageSet('tab', 'trackers'); localStorageSet('tr_closed', ''); render(); window.scrollTo(0, 0); if (k === 'code') loadCodes(); };
+    tiles.append(b);
+  });
+  page.append(tiles);
   page.append(el('p', 'hint', S.checking ? 'Checking for new mail…' : 'Pull down to refresh everything' + (d.updated_at ? '. Sorted by the agent at ' + when(Date.parse(d.updated_at)) + '.' : '.')));
 
   // Ask once to turn on morning notifications from My Inbox
@@ -753,6 +801,7 @@ function inboxTab(page, d, m, emails, trackers) {
     f.append(el('span', 'f-title', nx.title || k[3]));
     f.append(el('span', 'f-when', dt.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' }) + (nx.time ? ', ' + nx.time : '')));
     const sub = [nx.place, nx.from].filter(Boolean).join(', '); if (sub) f.append(el('span', 'f-sub', sub));
+    f.append(el('span', 'f-go', '→'));
     const tid = trackerThread(nx); if (tid) f.onclick = () => openThread(tid, nx.title);
     page.append(f);
   }
