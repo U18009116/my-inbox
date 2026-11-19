@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 50;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 51;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1114,7 +1114,7 @@ async function liveCheck() {
 }
 // ---------- Smart search: understands plain English and Afrikaans (dates, kinds of email, senders, attachments) ----------
 const SEARCH_KINDS = [
-  [/\b(invoices?|faktu(?:ur|re)|bills?|rekenings?|statements?|state)\b/gi, '{invoice faktuur statement rekening "tax invoice" bill}', 'invoices and bills', '{filename:invoice filename:faktuur filename:statement filename:rekening}'],
+  [/\b(invoices?|faktu(?:ur|re)|bills?|rekenings?|statements?|state)\b/gi, '{invoice faktuur statement rekening "tax invoice" bill receipt "payment confirmation" "order confirmation" kwitansie}', 'invoices and bills', '{filename:invoice filename:faktuur filename:statement filename:rekening}'],
   [/\b(receipts?|payments?|paid|betalings?|betaal|kwitansies?)\b/gi, '{receipt payment paid betaling "proof of payment"}', 'payments'],
   [/\b(tickets?|kaartjies?|bookings?|besprekings?|reservations?)\b/gi, '{ticket tickets booking e-ticket reservation kaartjie}', 'tickets and bookings', '{filename:ticket filename:tickets filename:eticket filename:boarding filename:booking}'],
   [/\b(graduation|graduate|gradeplegtigheid|degrees?|graad|academic|akademiese|transcripts?|results?|marks|punte|rapporte?|qualifications?|kwalifikasies?|university|universiteit|tuks)\b/gi, '{graduation degree transcript "academic record" "academic transcript" results qualification}', 'academic records', '{filename:academic filename:transcript filename:degree filename:graduation filename:results filename:qualification}'],
@@ -1128,7 +1128,34 @@ const SEARCH_KINDS = [
   [/\b(vehicle|licen[cs]e|lisensie|motor)\b/gi, '{vehicle car licence license motor}', 'vehicle'],
   [/\b(salary|payslips?|salaris|salarisstrokie)\b/gi, '{payslip salary salaris}', 'pay', '{filename:payslip filename:salaris}'],
 ];
-const SEARCH_STOP = new Set('find show get fetch search look for me my the a an of to on in at and or please with about email emails mail mails e-pos epos wys soek kry vir die van n een some any where is was all that this those these which what i want need can you jou ek met oor alle from by sent'.split(' '));
+const SEARCH_STOP = new Set('find show get fetch search look for me my the a an of to on in at and or please with about email emails mail mails e-pos epos wys soek kry vir die van n een some any where is was all that this those these which what i want need can you jou ek met oor alle from by sent bought buy buying purchased purchase paid pay gekoop koop betaal when wanneer got fetch could would please asb thanks dankie mine u jy kan sal wil moet het hê for my me did do does done have has had ever last'.split(' '));
+// Everyday things in Herman's words, expanded to the words shops and invoices actually use (e.g. aircon -> "air conditioner", BTU)
+const SEARCH_CONCEPTS = [
+  [/\b(aircon(?:s|ditioner)?|air ?cons?|air[- ]conditioner|air[- ]conditioning|lugversorger|lugreëling)\b/gi, '{aircon "air con" "air conditioner" "air conditioning" btu "split unit" "portable air"}', 'aircon'],
+  [/\b(fridges?|refrigerators?|yskaste?|freezers?|vrieskaste?)\b/gi, '{fridge refrigerator freezer yskas vrieskas}', 'fridge'],
+  [/\b(tvs?|televisions?|televisie)\b/gi, '{tv television "smart tv" qled oled uhd}', 'TV'],
+  [/\b(laptops?|computers?|rekenaars?|pc|macbook)\b/gi, '{laptop notebook computer macbook rekenaar}', 'computer'],
+  [/\b(phones?|cell ?phones?|selfone?|smartphones?|iphone|galaxy)\b/gi, '{phone smartphone cellphone iphone galaxy selfoon}', 'phone'],
+  [/\b(tyres?|tires?|bande|wiele|wheels?|rims?)\b/gi, '{tyre tyres tire tires bande wheel rims}', 'tyres'],
+  [/\b(washing machines?|washers?|wasmasjiene?|tumble dryers?|dryers?)\b/gi, '{"washing machine" washer dryer wasmasjien}', 'washing machine'],
+  [/\b(microwaves?|mikrogolf)\b/gi, '{microwave mikrogolf}', 'microwave'],
+  [/\b(vacuums?|stofsuiers?|hoovers?)\b/gi, '{vacuum stofsuier hoover}', 'vacuum'],
+  [/\b(mattress(?:es)?|matras(?:se)?|beds?|couch(?:es)?|sofas?|furniture|meubels)\b/gi, '{mattress bed couch sofa furniture matras meubels}', 'furniture'],
+  [/\b(solar|inverters?|panels?|lithium|batter(?:y|ies)|battery)\b/gi, '{solar inverter panel battery lithium deye sunsynk}', 'solar'],
+  [/\b(groceries|grocery|kos|sixty60|checkers|woolworths|pick ?n ?pay|spar)\b/gi, '{groceries sixty60 checkers woolworths "pick n pay" spar}', 'groceries'],
+  [/\b(electricity|kragrekening|elektrisiteit|krag|prepaid|eskom|tshwane|munisipaliteit|municipality|rates)\b/gi, '{electricity prepaid eskom tshwane municipality rates krag}', 'electricity'],
+  [/\b(internet|fibre|fiber|wifi|data|airtime|lugtyd|mtn|vodacom|telkom|vumatel)\b/gi, '{internet fibre wifi data airtime mtn vodacom telkom vumatel}', 'internet and phone'],
+  [/\b(fuel|petrol|diesel|brandstof)\b/gi, '{fuel petrol diesel brandstof engen shell sasol bp}', 'fuel'],
+  [/\b(medical aid|mediese fonds|discovery|momentum|bonitas|doctors?|dokters?|pharmacy|apteek|clicks|dis-?chem)\b/gi, '{"medical aid" discovery momentum bonitas doctor pharmacy clicks dischem}', 'medical'],
+  [/\b(rent|huur|lease|levies|heffings)\b/gi, '{rent lease levy levies huur}', 'rent'],
+  [/\b(school fees|skoolgeld|tuition|class fees|studiegeld)\b/gi, '{"school fees" tuition skoolgeld studiegeld}', 'school fees'],
+  [/\b(subscriptions?|intekening|netflix|showmax|dstv|spotify|youtube premium|disney)\b/gi, '{subscription netflix showmax dstv spotify "youtube premium" disney}', 'subscriptions'],
+  [/\b(car service|vehicle service|diens|service plan|mechanic|werktuigkundige)\b/gi, '{"car service" "vehicle service" "service plan" mechanic}', 'car service'],
+  [/\b(knives|knife|messe|mes)\b/gi, '{knife knives mes messe}', 'knives'],
+  [/\b(jeans|clothes|klere|shoes|skoene|shirts?|hemde)\b/gi, '{jeans clothes shoes shirt klere skoene}', 'clothes'],
+];
+const SEARCH_PURCHASE = '{invoice receipt "payment confirmation" "order confirmation" "tax invoice" order faktuur kwitansie}';
+
 const MONTH_RE = /\b(jan(?:uary|uarie)?|feb(?:ruary|ruarie)?|mar(?:ch)?|maart|apr(?:il)?|may|mei|jun(?:e|ie)?|jul(?:y|ie)?|aug(?:ust|ustus)?|sep(?:t|tember)?|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|des(?:ember)?)\b(?:\s+(20\d\d))?/;
 const MONTH_IDX = { jan: 0, feb: 1, mar: 2, maa: 2, apr: 3, may: 4, mei: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11, des: 11 };
 function gDay(d) { return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); }
@@ -1168,8 +1195,13 @@ function smartQuery(q) {
   if (/\b(photos?|pictures?|images?|pics?|fotos?|foto's)\b/.test(s)) { parts.push('filename:{jpg jpeg png heic}'); notes.push('photos'); cut(/\b(photos?|pictures?|images?|pics?|fotos?|foto's)\b/g); }
   if (/\b(unread|ongelees)\b/.test(s)) { parts.push('is:unread'); notes.push('unread'); cut(/\b(unread|ongelees)\b/g); }
   if (/\b(starred|belangrike?)\b/.test(s)) { parts.push('{is:starred is:important}'); notes.push('important'); cut(/\b(starred|belangrike?)\b/g); }
+  // What thing (aircon, fridge, tyres...) and whether he bought it
+  for (const [re, g, label] of SEARCH_CONCEPTS) { if (new RegExp(re.source, 'i').test(s)) { groups.push(g); notes.push(label); s = s.replace(re, ' '); } }
+  const bought = /\b(bought|buy|buying|purchased?|ordered|gekoop|koop|bestel(?:de)?)\b/.test(s);
   // What kind
-  for (const [re, g, label, f] of SEARCH_KINDS) { if (new RegExp(re.source, 'i').test(s)) { groups.push(g); notes.push(label); if (f) files.push(f); s = s.replace(re, ' '); } }
+  let kindInvoice = false;
+  for (const [re, g, label, f] of SEARCH_KINDS) { if (new RegExp(re.source, 'i').test(s)) { if (label === 'invoices and bills') kindInvoice = true; groups.push(g); notes.push(label); if (f) files.push(f); s = s.replace(re, ' '); } }
+  if (bought && !kindInvoice) { groups.push(SEARCH_PURCHASE); notes.push('purchases'); }
   const words = s.split(/[^a-z0-9@.&'-]+/).filter((w) => w.length > 1 && !SEARCH_STOP.has(w));
   return { parts, groups, files, words, note: notes.join(', ') };
 }
