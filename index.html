@@ -464,7 +464,9 @@ body::before{opacity:.55}
 .livepill{box-shadow:0 0 10px rgba(47,134,255,.35)}
 .feature{background:linear-gradient(180deg,#ffffff,#eaf1fc)!important;color:#0b0f1a;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:0 18px 44px rgba(31,111,255,.28),0 8px 24px rgba(0,0,0,.5)!important}
 .feature::before{content:none}
-.feature::after{background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'><path d='M0 78 L55 42 L105 68 L165 18 L225 62 L285 30 L345 66 L400 40 V120 H0Z' fill='%231f6fff' fill-opacity='.55'/><path d='M0 94 L70 62 L130 88 L200 52 L262 86 L330 58 L400 82 V120 H0Z' fill='%233fb2ff' fill-opacity='.4'/><path d='M0 108 L90 86 L160 102 L240 82 L320 100 L400 90 V120 H0Z' fill='%23ffffff'/></svg>") bottom/100% 100% no-repeat;opacity:1}
+/* blue sky scene: sky gradient, a round white sun, layered blue mountains (Herman picked this on 2026-11-19) */
+.feature{padding-top:122px!important}
+.feature::after{height:124px!important;opacity:1!important;-webkit-mask-image:none!important;mask-image:none!important;background:url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 120' preserveAspectRatio='none'><path d='M0 80 L60 46 L110 70 L170 30 L230 72 L290 44 L350 74 L400 52 V120 H0Z' fill='%23174fbf' fill-opacity='.75'/><path d='M0 98 L80 70 L140 92 L210 64 L270 94 L340 72 L400 90 V120 H0Z' fill='%230e3a94' fill-opacity='.85'/><path d='M0 112 L90 96 L170 110 L250 94 L330 108 L400 100 V120 H0Z' fill='%23ffffff'/></svg>") bottom/100% 100% no-repeat,radial-gradient(circle 20px at 76% 46%,rgba(255,255,255,.92) 94%,rgba(255,255,255,0) 100%),radial-gradient(circle 46px at 76% 46%,rgba(255,255,255,.25),rgba(255,255,255,0) 100%),linear-gradient(180deg,#1f6fff,#8fc6ff)}
 .f-title{color:#0b0f1a}
 .f-when{color:#1c2333}
 .f-sub{color:#5b6475}
@@ -496,7 +498,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 39;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 40;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
