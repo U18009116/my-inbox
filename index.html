@@ -425,7 +425,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 32;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 33;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -814,7 +814,7 @@ function codeCard(c) {
   const age = Math.max(0, Math.round((Date.now() - c.ts) / 60000));
   const r = el('div', 'tcard ccard' + (age > 15 ? ' read' : '')); r.setAttribute('role', 'button');
   const lead = el('div', 'tdate'); lead.style.setProperty('--k', '#b9a6ff');
-  lead.append(el('b', '', new Date(c.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })), el('span', '', age < 60 ? age + ' min ago' : Math.round(age / 60) + ' h ago'));
+  lead.append(el('b', '', new Date(c.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })), el('span', '', age < 60 ? age + ' min ago' : Math.round(age / 60) + ' h ago'));
   const mm = el('div', 'tbody');
   mm.append(el('span', 'tstatus', age > 15 ? 'Security code, may have expired' : 'Security code'), el('span', 'tname code-big', c.code), el('span', 'tsub', nameOf(c.from || '')));
   const cp = el('button', 'btn small-btn', 'Copy');
