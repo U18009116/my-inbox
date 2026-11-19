@@ -309,7 +309,39 @@ h2{font:700 22px/1.2 var(--head);letter-spacing:-.02em;margin:30px 4px 8px}
 .intro main>*{animation:fadeUp .45s var(--out) both}
 .intro main>:nth-child(2){animation-delay:.04s}.intro main>:nth-child(3){animation-delay:.08s}.intro main>:nth-child(4){animation-delay:.12s}.intro main>:nth-child(5){animation-delay:.16s}.intro main>:nth-child(n+6){animation-delay:.2s}
 .row .small-btn{padding:7px 12px;border-radius:999px;font-size:13px;font-weight:600}
-@media (prefers-reduced-motion:reduce){#reader.open,#reader.closing,#r-body>*,.intro main>*,.toast,.fb[aria-pressed=true]{animation:none!important}.btn,.tab,.feature,.tcard,.gear,.att{transition:none}}
+/* v29 depth: liquid glass, light, reflections and a slow aurora behind everything */
+body{background:transparent!important}
+body::before{content:'';position:fixed;left:-30%;right:-30%;top:-25%;height:75vh;z-index:-1;pointer-events:none;background:radial-gradient(38% 48% at 28% 32%,rgba(10,132,255,.34),transparent 70%),radial-gradient(34% 44% at 76% 22%,rgba(94,92,230,.28),transparent 70%),radial-gradient(30% 40% at 55% 62%,rgba(100,210,255,.12),transparent 70%);filter:blur(28px);animation:aurora 18s ease-in-out infinite alternate}
+@keyframes aurora{from{transform:translate3d(-5%,0,0) scale(1)}to{transform:translate3d(5%,4%,0) scale(1.1)}}
+.topbar{background:rgba(0,0,0,.5)}
+.brand{background:linear-gradient(180deg,#fff 40%,#b9dcff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card,.notif,.tcard,.search,.impbox,.set-row{background:linear-gradient(180deg,rgba(48,48,52,.62),rgba(28,28,30,.58));backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),inset 0 0 0 .5px rgba(255,255,255,.06),0 10px 30px rgba(0,0,0,.35)}
+.feature{position:relative;overflow:hidden;margin-bottom:30px;background:linear-gradient(145deg,rgba(10,132,255,.26),rgba(28,28,30,.72) 46%,rgba(94,92,230,.2));backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 0 0 .5px rgba(255,255,255,.1),0 18px 40px rgba(10,132,255,.18),0 8px 24px rgba(0,0,0,.5);transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg));transition:transform .5s var(--out);-webkit-box-reflect:below 6px linear-gradient(rgba(255,255,255,.13),transparent 32%)}
+.feature::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.13) 48%,transparent 60%);transform:translateX(-120%);animation:sheen 6s var(--out) 1.2s infinite}
+@keyframes sheen{0%{transform:translateX(-120%)}35%,100%{transform:translateX(120%)}}
+.feature:active{transform:perspective(900px) scale(.98)}
+.f-date b{background:linear-gradient(180deg,#fff 35%,#8fc2ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.f-count{box-shadow:0 0 16px rgba(10,132,255,.55)}
+.av,.m-av{background:radial-gradient(circle at 32% 26%,#9a9aa0,#48484c 55%,#232326)!important;box-shadow:inset 0 1px 1px rgba(255,255,255,.25),0 2px 6px rgba(0,0,0,.4)}
+.tdate{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.03));box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 .5px rgba(255,255,255,.08)}
+.btn{background:linear-gradient(180deg,#3d9bff,#0A84FF 55%,#0070e0);box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 18px rgba(10,132,255,.35)}
+.btn.ghost{background:rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.livepill{box-shadow:0 0 14px rgba(10,132,255,.5)}
+.livepill.quiet{box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.gear{box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+.dot{box-shadow:0 0 8px rgba(10,132,255,.9)}
+.tl i.on{box-shadow:0 0 8px rgba(255,159,10,.6)}
+.tabbar{left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));max-width:520px;margin:0 auto;padding:8px 6px;border-radius:28px;background:rgba(30,30,32,.55);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border:.5px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 12px 40px rgba(0,0,0,.6)}
+.tab[aria-current=true]::after{content:'';position:absolute;top:-5px;bottom:-5px;left:8px;right:8px;border-radius:20px;z-index:-1;background:rgba(10,132,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.1)}
+.msg iframe{box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.set-list{display:grid;gap:10px}
+.sw{margin-left:auto;flex:none;width:51px;height:31px;border-radius:99px;background:#39393d;position:relative;transition:background-color .25s}
+.sw::after{content:'';position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:transform .25s var(--out)}
+.sw.on{background:var(--green)}.sw.on::after{transform:translateX(20px)}
+.code-chip{display:inline-flex;align-items:center;gap:12px;margin-top:8px;padding:8px 14px;border-radius:12px;background:rgba(10,132,255,.15);box-shadow:inset 0 0 0 .5px rgba(10,132,255,.5),0 0 18px rgba(10,132,255,.2)}
+.code-chip b{font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;color:#fff}
+.code-chip small{font:600 12px/1 var(--body);color:var(--acc)}
+html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
 <body>
@@ -332,7 +364,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 28;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 29;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -595,6 +627,9 @@ function inboxTab(page, d, m, emails, trackers) {
     nb.append(tx, b); page.append(nb);
   }
 
+  // Just arrived: new mail spotted while the app is open (security codes show big)
+  if (S.fresh && S.fresh.length) { page.append(el('h2', '', 'Just arrived')); const fc = el('div', 'card'); S.fresh.forEach((x) => fc.append(emailRow(x))); page.append(fc); }
+
   // Featured: the next thing coming up
   const nx = nextUp(trackers);
   if (nx) {
@@ -690,9 +725,11 @@ function cleanTab(page, d, m) {
         b.textContent = '★ Important'; toast('Back in your inbox. Everything from ' + nameOf(x.from || x.from_email || 'this sender') + ' now counts as important.', 4000);
       } catch (e) { b.disabled = false; toast('Couldn\'t change it: ' + e.message); }
     };
+    if (x.thread_id) { mm.setAttribute('role', 'button'); mm.style.cursor = 'pointer'; mm.onclick = () => openThread(x.thread_id, x.subject || ''); } // open it to judge for yourself
     r.append(avatar(x.from || x.from_email), mm, b); sc.append(r);
   });
   page.append(sc);
+  if (list.length) page.append(el('p', 'hint', 'Tap a sender to read the email.'));
 }
 
 const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries', 'Delivery'], ticket: ['🎟️', 'var(--purple)', 'Tickets', 'Ticket'], meeting: ['👥', 'var(--blue)', 'Meetings', 'Meeting'], bill: ['🧾', 'var(--ios-red)', 'Bills', 'Bill'], booking: ['🧳', 'var(--teal)', 'Tickets', 'Booking'] };
@@ -773,6 +810,9 @@ function emailRow(x) {
   mm.append(l1, el('p', 'subj', x.title || '(no subject)'));
   if (x.preview) mm.append(el('p', 'prev', x.preview));
   if (x.atts) mm.append(el('p', 'prev', '📎 ' + x.atts));
+  // Security codes (OTPs) show big, tap to copy
+  const code = otpOf(x);
+  if (code) { const ch = el('span', 'code-chip'); ch.setAttribute('role', 'button'); ch.append(el('b', '', code), el('small', '', 'Tap to copy')); ch.onclick = async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(code); toast('Code copied'); } catch (err) { toast('Code: ' + code, 5000); } }; mm.append(ch); }
   mm.onclick = () => openThread(x.id, x.title);
   // The ★ ✓ ✕ buttons live inside the opened email; the list only shows a small mark of what was chosen
   const fb = S.feedback[x.id] && S.feedback[x.id].verdict;
@@ -843,7 +883,7 @@ function closeReader() {
     if (!rd.classList.contains('closing')) return;
     rd.classList.remove('open', 'closing'); $('r-body').replaceChildren();
     if (S.data || S.live) { const y = window.scrollY; render(); window.scrollTo(0, y); }
-  }, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 230);
+  }, motionOn() ? 230 : 0);
 }
 $('r-back').onclick = () => history.back();
 
@@ -871,6 +911,65 @@ async function quietUpdateCheck() {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') quietUpdateCheck(); });
 setTimeout(quietUpdateCheck, 3000);
+
+// ---------- Animations switch (Settings) ----------
+function motionOn() { return localStorageGet('motion') !== 'off'; }
+document.documentElement.classList.toggle('no-motion', !motionOn());
+
+// ---------- The Next up card tilts gently with the phone, like a real object ----------
+(function () {
+  let rx = 0, ry = 0, raf = 0, base = null;
+  const apply = () => { raf = 0; const f = document.querySelector('.feature'); if (f) { f.style.setProperty('--rx', rx.toFixed(2) + 'deg'); f.style.setProperty('--ry', ry.toFixed(2) + 'deg'); } };
+  const set = (x, y) => { if (!motionOn()) { x = 0; y = 0; } rx = Math.max(-7, Math.min(7, x)); ry = Math.max(-7, Math.min(7, y)); if (!raf) raf = requestAnimationFrame(apply); };
+  window.addEventListener('deviceorientation', (e) => {
+    if (e.beta == null) return;
+    if (!base) base = { b: e.beta, g: e.gamma };
+    base.b += (e.beta - base.b) * 0.02; base.g += (e.gamma - base.g) * 0.02; // slowly follows how Herman holds the phone
+    set(-(e.beta - base.b) * 0.5, (e.gamma - base.g) * 0.5);
+  });
+  window.addEventListener('pointermove', (e) => { if (e.pointerType === 'mouse') set(-(e.clientY / innerHeight - 0.5) * 8, (e.clientX / innerWidth - 0.5) * 8); });
+})();
+
+// ---------- New mail while the app is open (straight from Gmail: free, uses no Claude credits) ----------
+function otpOf(x) {
+  const t = (x.title || '') + ' ' + (x.preview || '');
+  if (!/(code|otp|verif|password|passcode|\bpin\b|one[- ]time|kode|wagwoord|sign[- ]?in|log[- ]?in|security)/i.test(t)) return '';
+  const m = t.match(/\b\d{6}\b/) || t.match(/\b\d{4,8}\b/);
+  return m ? m[0] : '';
+}
+async function threadMeta(id) {
+  const th = await gmail('threads/' + id + '?format=metadata&metadataHeaders=From&metadataHeaders=Subject');
+  const last = th.messages[th.messages.length - 1];
+  return { id, from: hdr(last, 'from'), title: hdr(last, 'subject'), preview: decodeEntities(last.snippet), time: when(last.internalDate), ts: +last.internalDate, unread: th.messages.some((m) => (m.labelIds || []).includes('UNREAD')) };
+}
+async function pollNew() {
+  if (document.visibilityState !== 'visible' || !S.token || Date.now() >= S.exp || S.polling) return;
+  S.polling = true;
+  try {
+    const r = await gmail('threads?maxResults=15&q=' + encodeURIComponent('in:inbox newer_than:1d'));
+    const ids = (r.threads || []).map((t) => t.id);
+    let add = [];
+    if (!S.seen) {
+      // First look: anything unread from the last 20 minutes counts as just arrived (an OTP sent while the app was closed)
+      S.seen = new Set(ids);
+      add = (await Promise.all(ids.slice(0, 3).map(threadMeta))).filter((x) => x.unread && Date.now() - x.ts < 20 * 60e3);
+    } else {
+      const ni = ids.filter((id) => !S.seen.has(id)); ni.forEach((id) => S.seen.add(id));
+      if (ni.length) add = await Promise.all(ni.map(threadMeta));
+    }
+    if (add.length) {
+      S.fresh = add.concat(S.fresh || []).slice(0, 10);
+      add.forEach((x) => setUnread(x.id, true));
+      const code = add.map(otpOf).find(Boolean);
+      toast(code ? 'Code ' + code + ' from ' + nameOf(add[0].from) : 'New email from ' + nameOf(add[0].from), 4000);
+      if (!$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+    }
+  } catch (e) {}
+  S.polling = false;
+}
+setInterval(pollNew, 30000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') setTimeout(pollNew, 600); });
+setTimeout(pollNew, 3000);
 function openSettings() { openReader('Settings'); S.sub = null; settingsList(); }
 function settingsList() {
   $('r-title').textContent = 'Settings';
@@ -881,7 +980,9 @@ function settingsList() {
   b.append(el('span', 'set-val', 'Version ' + APP_VERSION), el('span', 'set-chev', '›'));
   if (S.newer) b.querySelector('.set-val').style.marginLeft = '8px';
   b.onclick = () => { S.sub = 'about'; history.pushState({ r: 2 }, ''); aboutPage(); };
-  box.append(b); $('r-body').replaceChildren(box);
+  const mo = el('button', 'set-row'); mo.append(el('span', '', 'Animations'), el('span', 'sw' + (motionOn() ? ' on' : '')));
+  mo.onclick = () => { const now = !motionOn(); localStorageSet('motion', now ? 'on' : 'off'); document.documentElement.classList.toggle('no-motion', !now); mo.lastChild.classList.toggle('on', now); };
+  box.append(b, mo); $('r-body').replaceChildren(box);
 }
 function aboutPage() {
   $('r-title').textContent = 'About app';
