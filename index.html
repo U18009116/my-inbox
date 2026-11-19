@@ -386,6 +386,22 @@ h2{font:650 22px/1.2 var(--head);letter-spacing:-.035em}
 .seg button[aria-pressed=true]{background:var(--grad);color:#fff}
 .gear{color:#c9c3ff}
 .search input::placeholder{color:#6d7090}
+/* v32 tracker filters: a fixed 3x2 grid, label left and count right, nothing slides sideways */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;overflow:visible;margin:0 0 14px}
+.seg button{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07);color:#e8e8ef;font:500 14px/1 var(--body)}
+.seg button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg button b{font:500 13px/1 var(--mono);color:#9aa3c7}
+.seg button.zero{color:#6d7090}.seg button.zero b{color:#4d5070}
+.seg button[aria-pressed=true]{background:var(--grad);box-shadow:0 6px 18px rgba(90,100,255,.35);color:#fff}
+.seg button[aria-pressed=true] b{color:#fff}
+.seg button.folded{opacity:.7}
+.ccard{align-items:center}
+.ccard .tdate b{font-size:15px;letter-spacing:-.02em}
+.ccard .tdate span{font-size:10px;color:#b9a6ff}
+.code-big{font:500 26px/1.1 var(--mono)!important;letter-spacing:.14em!important;color:#fff}
+.ccard.read .code-big{color:#7a7f99}
+.ccard .small-btn{flex:none;align-self:center;margin-left:auto;border-radius:999px;padding:8px 14px}
+.ccard .tbody{padding-right:6px}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -409,7 +425,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 31;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 32;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -638,7 +654,7 @@ function render() {
   // Top bar: date, wordmark, and a red pill for what needs you
   const ids = new Set(emails.map((x) => x.id || x.thread_id)); (S.live || []).forEach((x) => ids.add(x.id));
   const unreadN = [...ids].filter(isUnread).length;
-  const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length;
+  const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length + (S.codes || []).filter((c) => Date.now() - c.ts < 15 * 60e3).length;
   const top = el('header', 'topbar');
   const pill = el('span', 'livepill' + (unreadN ? '' : ' quiet'), unreadN ? unreadN + ' unread' : 'All read');
   const gear = el('button', 'gear' + (S.newer ? ' dot' : '')); gear.setAttribute('aria-label', 'Settings'); gear.innerHTML = GEAR; gear.onclick = openSettings;
@@ -658,7 +674,7 @@ function render() {
   TABS.forEach(([k, label]) => {
     const b = el('button', 'tab'); b.setAttribute('aria-current', String(S.tab === k)); b.innerHTML = ICON[k]; b.append(el('span', '', label));
     const n = k === 'inbox' ? unreadN : k === 'trackers' ? trUnread : 0; if (n) b.append(el('i', 'badge', String(n)));
-    b.onclick = () => { S.tab = k; localStorageSet('tab', k); render(); window.scrollTo(0, 0); if (k !== 'search') refreshData(); };
+    b.onclick = () => { S.tab = k; localStorageSet('tab', k); render(); window.scrollTo(0, 0); if (k !== 'search') refreshData(); if (k === 'trackers') loadCodes(); };
     nav.append(b);
   });
   app.append(nav);
@@ -793,6 +809,30 @@ function cleanTab(page, d, m) {
   if (list.length) page.append(el('p', 'hint', 'Tap a sender to read the email.'));
 }
 
+// Security codes (OTPs) from the last 24 hours, straight from Gmail (free). Fresh ones are bright; after 15 minutes they fade
+function codeCard(c) {
+  const age = Math.max(0, Math.round((Date.now() - c.ts) / 60000));
+  const r = el('div', 'tcard ccard' + (age > 15 ? ' read' : '')); r.setAttribute('role', 'button');
+  const lead = el('div', 'tdate'); lead.style.setProperty('--k', '#b9a6ff');
+  lead.append(el('b', '', new Date(c.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })), el('span', '', age < 60 ? age + ' min ago' : Math.round(age / 60) + ' h ago'));
+  const mm = el('div', 'tbody');
+  mm.append(el('span', 'tstatus', age > 15 ? 'Security code, may have expired' : 'Security code'), el('span', 'tname code-big', c.code), el('span', 'tsub', nameOf(c.from || '')));
+  const cp = el('button', 'btn small-btn', 'Copy');
+  cp.onclick = async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(c.code); toast('Code copied'); } catch (err) { toast('Code: ' + c.code, 5000); } };
+  r.append(lead, mm, cp); r.onclick = () => openThread(c.id, c.title);
+  return r;
+}
+async function loadCodes() {
+  if (!S.token || Date.now() >= S.exp) return;
+  try {
+    const r = await gmail('threads?maxResults=12&q=' + encodeURIComponent('newer_than:1d {code otp pin verification passcode kode wagwoord}'));
+    const items = await Promise.all((r.threads || []).map((t) => threadMeta(t.id)));
+    S.codes = items.map((x) => Object.assign(x, { code: otpOf(x) })).filter((x) => x.code).sort((a, b) => b.ts - a.ts);
+    if (S.tab === 'trackers' && !$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+  } catch (e) {}
+}
+setTimeout(loadCodes, 3500);
+
 const KINDS = { delivery: ['📦', 'var(--orange)', 'Deliveries', 'Delivery'], ticket: ['🎟️', 'var(--purple)', 'Tickets', 'Ticket'], meeting: ['👥', 'var(--blue)', 'Meetings', 'Meeting'], bill: ['🧾', 'var(--ios-red)', 'Bills', 'Bill'], booking: ['🧳', 'var(--teal)', 'Tickets', 'Booking'] };
 const groupOf = (k) => (k === 'booking' ? 'ticket' : k);
 function trackerSection(list) {
@@ -802,17 +842,19 @@ function trackerSection(list) {
   sec.append(el('h2', '', 'Trackers'));
   const open = openTrackers(list);
   const seg = el('div', 'seg');
-  [['all', 'All'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
-    const n = k === 'all' ? open.length : open.filter((t) => groupOf(t.kind) === k).length;
+  const codes = S.codes || [];
+  [['all', 'All'], ['code', 'Codes'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
+    const n = k === 'all' ? open.length + codes.length : k === 'code' ? codes.length : open.filter((t) => groupOf(t.kind) === k).length;
     const on = S.kind === k;
-    const b = el('button', '', label + (n ? ' ' + n : '') + (on ? (trOpen ? ' ▾' : ' ▸') : '')); b.setAttribute('aria-pressed', String(on));
+    const b = el('button', n ? '' : 'zero'); b.append(el('span', '', label), el('b', '', String(n))); b.setAttribute('aria-pressed', String(on)); if (on && !trOpen) b.classList.add('folded');
     b.onclick = () => { if (on) localStorageSet('tr_closed', trOpen ? '1' : ''); else { S.kind = k; localStorageSet('tr_closed', ''); } render(); };
     seg.append(b);
   });
   sec.append(seg);
   const listEl = el('div', 'tlist');
-  const shown = open.filter((t) => S.kind === 'all' || groupOf(t.kind) === S.kind);
-  if (!shown.length) listEl.append(el('div', 'card empty', 'Nothing being tracked here.'));
+  if (S.kind === 'all' || S.kind === 'code') codes.forEach((c) => listEl.append(codeCard(c)));
+  const shown = S.kind === 'code' ? [] : open.filter((t) => S.kind === 'all' || groupOf(t.kind) === S.kind);
+  if (!shown.length && !((S.kind === 'all' || S.kind === 'code') && codes.length)) listEl.append(el('div', 'card empty', S.kind === 'code' ? 'No security codes in the last 24 hours. New ones show here and pop up as alerts.' : 'Nothing being tracked here.'));
   shown.forEach((t) => {
     const k = KINDS[t.kind] || KINDS.delivery;
     const tid0 = trackerThread(t); const r = el('button', 'tcard' + (tid0 && !isUnread(tid0) ? ' read' : ''));
@@ -1035,7 +1077,7 @@ async function pollNew() {
     if (add.length) {
       S.fresh = add.concat(S.fresh || []).slice(0, 10);
       add.forEach((x) => setUnread(x.id, true));
-      const code = add.map(otpOf).find(Boolean);
+      const code = add.map(otpOf).find(Boolean); if (code) loadCodes();
       toast(code ? 'Code ' + code + ' from ' + nameOf(add[0].from) : 'New email from ' + nameOf(add[0].from), 4000);
       if (!$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
     }
