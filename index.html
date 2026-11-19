@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* "Fight night" look: pure black, condensed heavy type, one red for what needs you, square corners */
 :root{--bg:#000;--card:#151515;--fill:#232323;--line:#2b2b2b;--text:#fff;--sub:#a3a3a3;--red:#ff4b3e;--green:#2fd16f;--orange:#ff9f1c;--blue:#4fc3f7;--purple:#b388ff;--teal:#4dd0e1;--gray:#6b6b6b;--r:8px;
@@ -341,6 +341,51 @@ body::before{content:'';position:fixed;left:-30%;right:-30%;top:-25%;height:75vh
 .code-chip{display:inline-flex;align-items:center;gap:12px;margin-top:8px;padding:8px 14px;border-radius:12px;background:rgba(10,132,255,.15);box-shadow:inset 0 0 0 .5px rgba(10,132,255,.5),0 0 18px rgba(10,132,255,.2)}
 .code-chip b{font:600 22px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.14em;color:#fff}
 .code-chip small{font:600 12px/1 var(--body);color:var(--acc)}
+/* v31 own identity: Geist type, blue-to-violet signature, gradient hairline edges, dot-grid night sky; no light sweep */
+:root{--head:Geist,-apple-system,BlinkMacSystemFont,Inter,system-ui,sans-serif;--body:Geist,-apple-system,BlinkMacSystemFont,Inter,system-ui,sans-serif;--mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--grad:linear-gradient(135deg,#3d8bff 0%,#6f6bff 55%,#a463ff 100%);--edge:linear-gradient(160deg,rgba(120,170,255,.42),rgba(255,255,255,.06) 36%,rgba(255,255,255,.03) 64%,rgba(164,99,255,.34))}
+body{font-family:var(--body);letter-spacing:-.006em}
+#app::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.075) 1px,transparent 1.3px);background-size:22px 22px;-webkit-mask-image:radial-gradient(130% 70% at 50% 0%,#000 25%,transparent 75%);mask-image:radial-gradient(130% 70% at 50% 0%,#000 25%,transparent 75%)}
+.feature::after{content:none;animation:none}
+.card,.tcard,.notif,.feature,.search,.impbox,.set-row{position:relative}
+.card::after,.tcard::after,.notif::after,.feature::before,.search::after,.impbox::after,.set-row::after{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:var(--edge);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none}
+.brand{font:650 18px/1 var(--head);letter-spacing:-.03em;background:linear-gradient(180deg,#fff 35%,#c9c3ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font:650 22px/1.2 var(--head);letter-spacing:-.035em}
+.f-title,.tname,.msg h3,.about-name{font-family:var(--head);letter-spacing:-.03em}
+.f-date b{font:300 62px/.9 var(--mono);letter-spacing:-.06em;background:linear-gradient(180deg,#fff 30%,#a9b8ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+.f-date small{color:#b9a6ff;font:500 12px/1 var(--mono);letter-spacing:.04em}
+.f-date{border-right:1px solid transparent;border-image:linear-gradient(180deg,transparent,rgba(140,150,255,.6),transparent) 1}
+.feature{background:radial-gradient(120% 90% at 0% 0%,rgba(61,139,255,.22),transparent 55%),radial-gradient(90% 80% at 100% 100%,rgba(164,99,255,.2),transparent 60%),rgba(20,20,24,.72)}
+.livepill{background:var(--grad);box-shadow:0 0 18px rgba(111,107,255,.5)}
+.f-count{background:var(--grad);box-shadow:0 0 16px rgba(111,107,255,.55)}
+.btn{background:var(--grad);box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 8px 22px rgba(90,100,255,.35)}
+.btn.ghost{background:rgba(255,255,255,.07);color:#cfd6ff}
+.dot{background:var(--grad);box-shadow:0 0 10px rgba(111,107,255,.9)}
+.tdate{background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.02) 60%);box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -6px 12px rgba(0,0,0,.35),0 6px 14px rgba(0,0,0,.4)}
+.tdate b{font:500 24px/1 var(--mono);letter-spacing:-.04em}
+.tdate span{font:500 11px/1 var(--mono);letter-spacing:.03em}
+.tcard{transform:perspective(900px) rotateX(calc(var(--rx,0deg) * .45)) rotateY(calc(var(--ry,0deg) * .45));transition:transform .5s var(--out)}
+.tcard:active{transform:perspective(900px) scale(.98)}
+.row.kv b,.time,.badge,.livepill,.f-count{font-variant-numeric:tabular-nums}
+.row.kv b{font-family:var(--mono);font-size:16px}
+.tabbar{border-radius:22px;background:rgba(14,14,18,.66);border:0}
+.tabbar::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1px;background:var(--edge);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);pointer-events:none}
+.tab[aria-current=true]{color:#fff}
+.tab[aria-current=true] svg{filter:drop-shadow(0 0 8px rgba(111,107,255,.85))}
+.tab[aria-current=true]::after{top:auto;bottom:-6px;left:50%;right:auto;width:18px;height:3px;margin-left:-9px;border-radius:3px;background:var(--grad);box-shadow:0 0 10px rgba(111,107,255,.9)}
+#reader{background:radial-gradient(70% 40% at 15% 0%,rgba(61,139,255,.16),transparent 70%),radial-gradient(60% 35% at 95% 4%,rgba(164,99,255,.14),transparent 70%),#000}
+.bar{background:rgba(0,0,0,.45)}
+.bar button{color:#a9b8ff}
+.m-av,.av{background:radial-gradient(circle at 32% 26%,#a3a6c2,#4a4b62 55%,#1f2030)!important}
+.impbox h3{color:#9aa3c7}
+.fb[aria-pressed=true].star{background:linear-gradient(135deg,#ffb340,#ff8a00)}
+.fb[aria-pressed=true].tick{background:linear-gradient(135deg,#4be08a,#20b866)}
+.code-chip{background:rgba(111,107,255,.14);box-shadow:inset 0 0 0 1px rgba(140,150,255,.45),0 0 22px rgba(111,107,255,.25)}
+.code-chip b{font-family:var(--mono)}
+.code-chip small{color:#b9a6ff}
+.sw.on{background:var(--grad)}
+.seg button[aria-pressed=true]{background:var(--grad);color:#fff}
+.gear{color:#c9c3ff}
+.search input::placeholder{color:#6d7090}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
 </style>
 </head>
@@ -364,7 +409,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 30;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 31;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -935,7 +980,7 @@ document.documentElement.classList.toggle('no-motion', !motionOn());
 // ---------- The Next up card tilts gently with the phone, like a real object ----------
 (function () {
   let rx = 0, ry = 0, raf = 0, base = null;
-  const apply = () => { raf = 0; const f = document.querySelector('.feature'); if (f) { f.style.setProperty('--rx', rx.toFixed(2) + 'deg'); f.style.setProperty('--ry', ry.toFixed(2) + 'deg'); } };
+  const apply = () => { raf = 0; const s = document.documentElement.style; s.setProperty('--rx', rx.toFixed(2) + 'deg'); s.setProperty('--ry', ry.toFixed(2) + 'deg'); }; // the Next up card and the tracker cards lean with the phone
   const set = (x, y) => { if (!motionOn()) { x = 0; y = 0; } rx = Math.max(-7, Math.min(7, x)); ry = Math.max(-7, Math.min(7, y)); if (!raf) raf = requestAnimationFrame(apply); };
   window.addEventListener('deviceorientation', (e) => {
     if (e.beta == null) return;
@@ -947,12 +992,26 @@ document.documentElement.classList.toggle('no-motion', !motionOn());
 })();
 
 // ---------- New mail while the app is open (straight from Gmail: free, uses no Claude credits) ----------
-function otpOf(x) {
-  const t = (x.title || '') + ' ' + (x.preview || '');
-  if (!/(code|otp|verif|password|passcode|\bpin\b|one[- ]time|kode|wagwoord|sign[- ]?in|log[- ]?in|security)/i.test(t)) return '';
-  const m = t.match(/\b\d{6}\b/) || t.match(/\b\d{4,8}\b/);
-  return m ? m[0] : '';
+// Strict: a code must sit right next to "code", "OTP", "PIN" etc. Never a year, an amount, or a postal/promo/order/tracking number
+function otpText(t) {
+  t = String(t || '').replace(/\s+/g, ' ');
+  const pats = [
+    /\b(?:verification code|security code|login code|sign[- ]?in code|one[- ]time (?:pin|password|code)|otp|passcode|pin|code|kode|eenmalige wagwoord|wagwoord)\b(?: is| was| vir| for| to| of)?[^0-9]{0,24}?\b(?:G-)?(\d{4,8})\b(?![.,]\d)/i,
+    /\b(?:G-)?(\d{4,8})\b(?![.,]\d) (?:is|is jou|is your|as your)\b[^.]{0,30}?\b(?:code|otp|pin|kode|password|wagwoord)\b/i,
+  ];
+  for (const p of pats) {
+    const re = new RegExp(p.source, 'gi'); let m;
+    while ((m = re.exec(t))) {
+      const n = m[1], around = t.slice(Math.max(0, m.index - 20), m.index + m[0].length);
+      if (/^(19|20)\d\d$/.test(n)) continue;                                   // a year
+      if (/(R|ZAR|\$|€|£|USD)\s?$/i.test(t.slice(0, t.indexOf(n, m.index)))) continue; // an amount
+      if (/(postal|post|zip|area|promo|discount|voucher|coupon|dial|country|tracking|order|reference|ref|branch|swift|product|item|sku)\s*(code|kode|number|no\.?|pin)/i.test(around)) continue;
+      return n;
+    }
+  }
+  return '';
 }
+function otpOf(x) { return otpText((x.title || '') + ' ' + (x.preview || '')); }
 async function threadMeta(id) {
   const th = await gmail('threads/' + id + '?format=metadata&metadataHeaders=From&metadataHeaders=Subject');
   const last = th.messages[th.messages.length - 1];
