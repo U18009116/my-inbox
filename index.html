@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 51;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 53;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1161,7 +1161,7 @@ const MONTH_IDX = { jan: 0, feb: 1, mar: 2, maa: 2, apr: 3, may: 4, mei: 4, jun:
 function gDay(d) { return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); }
 function smartQuery(q) {
   let s = ' ' + String(q).toLowerCase().replace(/[?!,]/g, ' ') + ' ';
-  const parts = [], groups = [], notes = [], files = [];
+  const parts = [], groups = [], notes = [], files = [], things = [];
   const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const shift = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
   const range = (a, b, label) => { parts.push('after:' + gDay(a) + ' before:' + gDay(b)); notes.push(label); };
@@ -1196,16 +1196,32 @@ function smartQuery(q) {
   if (/\b(unread|ongelees)\b/.test(s)) { parts.push('is:unread'); notes.push('unread'); cut(/\b(unread|ongelees)\b/g); }
   if (/\b(starred|belangrike?)\b/.test(s)) { parts.push('{is:starred is:important}'); notes.push('important'); cut(/\b(starred|belangrike?)\b/g); }
   // What thing (aircon, fridge, tyres...) and whether he bought it
-  for (const [re, g, label] of SEARCH_CONCEPTS) { if (new RegExp(re.source, 'i').test(s)) { groups.push(g); notes.push(label); s = s.replace(re, ' '); } }
+  for (const [re, g, label] of SEARCH_CONCEPTS) { if (new RegExp(re.source, 'i').test(s)) { groups.push(g); things.push(g); notes.push(label); s = s.replace(re, ' '); } }
   const bought = /\b(bought|buy|buying|purchased?|ordered|gekoop|koop|bestel(?:de)?)\b/.test(s);
   // What kind
   let kindInvoice = false;
   for (const [re, g, label, f] of SEARCH_KINDS) { if (new RegExp(re.source, 'i').test(s)) { if (label === 'invoices and bills') kindInvoice = true; groups.push(g); notes.push(label); if (f) files.push(f); s = s.replace(re, ' '); } }
   if (bought && !kindInvoice) { groups.push(SEARCH_PURCHASE); notes.push('purchases'); }
   const words = s.split(/[^a-z0-9@.&'-]+/).filter((w) => w.length > 1 && !SEARCH_STOP.has(w));
-  return { parts, groups, files, words, note: notes.join(', ') };
+  return { parts, groups, files, things, words, note: notes.join(', ') };
 }
-// Runs a few searches at once (exact, subject, either word, attachment name, sender), then ranks what matched most
+// Gmail call that waits and retries when Google says "slow down" (403/429)
+async function gq(p) { for (let i = 0; ; i++) { try { return await gmail(p); } catch (e) { if (i >= 2 || !/403|429|rate/i.test(e.message)) throw e; await new Promise((r) => setTimeout(r, 800 * (i + 1))); } } }
+async function mapLimit(arr, n, fn) { const out = new Array(arr.length); let i = 0; await Promise.all(Array.from({ length: Math.min(n, arr.length) }, async () => { while (i < arr.length) { const k = i++; out[k] = await fn(arr[k], k); } })); return out; }
+// The readable text of an email thread (sender, subject, body, attachment names), remembered for this session
+async function threadText(id) {
+  S.textCache = S.textCache || {};
+  if (S.textCache[id] !== undefined) return S.textCache[id];
+  let t = '';
+  try {
+    const th = await gq('threads/' + id + '?format=full');
+    th.messages.slice(-3).forEach((m) => { const o = { atts: [] }; walk(m.payload, o); t += ' ' + hdr(m, 'from') + ' ' + hdr(m, 'subject') + ' | ' + (o.text || String(o.html || '').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ')) + ' ' + o.atts.map((a) => a.name).join(' '); });
+    t = t.replace(/&nbsp;|&amp;|&#\d+;/g, ' ').replace(/\s+/g, ' ').toLowerCase().slice(0, 80000);
+  } catch (e) { return ''; }
+  return (S.textCache[id] = t);
+}
+// AI-style search in three steps, like modern email search engines:
+// 1) understand the question (smartQuery), 2) search wide with several Gmail searches, 3) read the best few and re-rank them
 async function search(q) {
   S.query = q; S.searchNote = ''; if (!q) { S.results = null; render(); return; }
   S.results = 'loading'; render();
@@ -1219,21 +1235,45 @@ async function search(q) {
     qs.push([2, base + ' from:' + w[0] + (w.length > 1 ? ' ' + w.slice(1).join(' ') : '')]);
   } else if (base) qs.push([3, base]);
   else qs.push([3, q]);
-  // A document named like what he asked for ranks top, highest when it also matches his other words (e.g. Takealot + an invoice file)
-  sq.files.forEach((f) => { if (w.length) qs.push([10, only + ' ' + f + ' {' + w.join(' ') + '}']); qs.push([w.length ? 4 : 10, only + ' ' + f]); });
+  // When he names a thing (aircon, MTN...), every strong match must mention it
+  const must = sq.things.join(' ');
+  if (must) qs.push([6, base]);
+  sq.files.forEach((f) => { if (w.length || must) qs.push([10, only + ' ' + f + ' ' + must + (w.length ? ' {' + w.join(' ') + '}' : '')]); qs.push([(w.length || must) ? 3 : 10, only + ' ' + f]); });
   if (sq.groups.length) qs.push([2, only + ' has:attachment ' + sq.groups.join(' ')]);
-  // Adverts and social mail only rank low (one fallback search), unless Herman is looking for adverts
+  // Adverts, social mail and the agent's own summaries rank low (one fallback search), unless he is looking for adverts
   if (!/\b(adverts?|ads?|promos?|promotions?|specials?|deals?|sales?|aanbiedings?|nuusbriewe?|newsletters?)\b/i.test(q)) { qs.forEach((x) => { x[1] += ' -category:promotions -category:social -subject:"need you" -subject:"needs you" -subject:"all clear"'; }); qs.push([1, (w.length ? w.join(' ') + ' ' : '') + (base || (w.length ? '' : q))]); }
   S.searchNote = 'Looked for ' + ([sq.note, w.length ? '"' + w.join(' ') + '"' : ''].filter(Boolean).join(', ') || '"' + q + '"');
   try {
-    const lists = await Promise.all(qs.map(([wt, qq]) => gmail('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id)]).catch(() => [wt, []])));
+    const lists = await mapLimit(qs, 3, ([wt, qq]) => gq('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id)]).catch(() => [wt, []]));
     const score = new Map(), first = new Map(); let n = 0;
     lists.forEach(([wt, ids]) => ids.forEach((id) => { score.set(id, (score.get(id) || 0) + wt); if (!first.has(id)) first.set(id, n++); }));
-    let top = [...score.keys()].sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).slice(0, 20);
-    if (!top.length) { const r = await gmail('threads?maxResults=20&q=' + encodeURIComponent(q)); top = (r.threads || []).map((t) => t.id); }
+    let top = [...score.keys()].sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).slice(0, 25);
+    if (!top.length) { const r = await gq('threads?maxResults=20&q=' + encodeURIComponent(q)); top = (r.threads || []).map((t) => t.id); top.forEach((id) => score.set(id, 0)); }
+    // Re-rank: read the best 15 and reward real matches, e.g. "air conditioner" right next to a price on a receipt
+    const toTerms = (s) => [...new Set((s.toLowerCase().match(/"[^"]+"|[a-z0-9][a-z0-9-]+/g) || []).map((t) => t.replace(/"/g, '')))].filter((t) => t.length > 2);
+    const terms = toTerms(must + ' ' + w.join(' ')), thingTerms = toTerms(must);
+    const kindTerms = toTerms(sq.groups.filter((g) => !sq.things.includes(g)).join(' ')).filter((t) => t.length > 3);
+    if (terms.length || kindTerms.length) {
+      const deep = top.slice(0, 15);
+      const texts = await mapLimit(deep, 4, threadText);
+      deep.forEach((id, i) => {
+        const t = texts[i]; if (!t) return; let bonus = 0;
+        for (const term of terms) {
+          let p = t.indexOf(term); if (p < 0) continue;
+          bonus += 2; if (t.slice(0, 160).includes(term)) bonus += 4; // in the sender or subject
+          for (let k = 0; p >= 0 && k < 30; k++) { if (/r ?\d[\d ,]*[.,]\d\d/.test(t.slice(p, p + 140))) { bonus += 8; break; } p = t.indexOf(term, p + term.length); } // next to a price, like a line on a receipt
+        }
+        if (thingTerms.length && !thingTerms.some((x) => t.includes(x))) bonus -= 6; // the thing he named isn't really in it
+        if (kindTerms.some((x) => t.slice(0, 160).includes(x))) bonus += 3; // the kind of document is in the subject
+        if (/what happened in the last|digest|forum|newsletter|weekly|e-bulletin/.test(t.slice(0, 300))) bonus -= 12; // forum digests and newsletters
+        score.set(id, (score.get(id) || 0) + bonus);
+      });
+      top = deep.sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).concat(top.slice(15));
+    }
+    top = top.slice(0, 20);
     S.meta = S.meta || {};
     const need = top.filter((id) => !S.meta[id]);
-    (await Promise.all(need.map(threadMeta))).forEach((x) => { S.meta[x.id] = x; });
+    (await mapLimit(need, 5, (id) => threadMeta(id).catch(() => null))).forEach((x) => { if (x) S.meta[x.id] = x; });
     S.results = top.map((id) => S.meta[id]).filter(Boolean);
   } catch (e) { S.results = []; toast('Search failed: ' + e.message); }
   render();
