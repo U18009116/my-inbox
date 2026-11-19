@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 45;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 46;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -860,7 +860,7 @@ function inboxTab(page, d, m, emails, trackers) {
   }
 
   // Just arrived: new mail spotted while the app is open (security codes show big)
-  if (S.fresh && S.fresh.length) { page.append(el('h2', '', 'Just arrived')); const fc = el('div', 'card'); S.fresh.forEach((x) => fc.append(emailRow(x))); page.append(fc); }
+  if (S.fresh && S.fresh.length) { page.append(el('h2', '', 'New since ' + (d.updated_at ? when(Date.parse(d.updated_at)) : 'yesterday'))); const fc = el('div', 'card'); S.fresh.forEach((x) => fc.append(emailRow(x))); page.append(fc); }
 
   // Featured: the next thing coming up
   const nx = nextUp(trackers);
@@ -1231,28 +1231,34 @@ async function threadMeta(id) {
   const last = th.messages[th.messages.length - 1];
   return { id, from: hdr(last, 'from'), title: hdr(last, 'subject'), preview: decodeEntities(last.snippet), time: when(last.internalDate), ts: +last.internalDate, unread: th.messages.some((m) => (m.labelIds || []).includes('UNREAD')) };
 }
+// Everything new in the inbox since the agent last sorted: read ones stay (greyed) until the next sort
 async function pollNew() {
-  if (document.visibilityState !== 'visible' || !S.token || Date.now() >= S.exp || S.polling) return;
+  if (document.visibilityState !== 'visible' || S.polling) return;
+  if (!S.token || Date.now() >= S.exp) {
+    // Google's sign-in lasts an hour: quietly sign back in (at most every 10 minutes) instead of making Herman refresh
+    const last = Number(localStorageGet('silent') || 0);
+    if (Date.now() - last > 10 * 60e3 && !$('reader').classList.contains('open')) { localStorageSet('silent', String(Date.now())); goSignIn(true); }
+    return;
+  }
   S.polling = true;
   try {
-    const r = await gmail('threads?maxResults=15&q=' + encodeURIComponent('in:inbox newer_than:1d'));
+    const since = S.data && S.data.updated_at ? Math.floor(Date.parse(S.data.updated_at) / 1000) : Math.floor(Date.now() / 1000) - 86400;
+    const r = await gmail('threads?maxResults=15&q=' + encodeURIComponent('in:inbox after:' + since + ' -category:promotions -category:social -category:forums'));
     const ids = (r.threads || []).map((t) => t.id);
-    let add = [];
-    if (!S.seen) {
-      // First look: anything unread from the last 20 minutes counts as just arrived (an OTP sent while the app was closed)
-      S.seen = new Set(ids);
-      add = (await Promise.all(ids.slice(0, 3).map(threadMeta))).filter((x) => x.unread && Date.now() - x.ts < 20 * 60e3);
-    } else {
-      const ni = ids.filter((id) => !S.seen.has(id)); ni.forEach((id) => S.seen.add(id));
-      if (ni.length) add = await Promise.all(ni.map(threadMeta));
+    const imp = new Set(((S.data && S.data.morning && S.data.morning.emails) || []).map((x) => x.id || x.thread_id));
+    S.meta = S.meta || {};
+    const need = ids.filter((id) => !S.meta[id]);
+    const got = await Promise.all(need.map(threadMeta));
+    got.forEach((x) => { S.meta[x.id] = x; setUnread(x.id, x.unread); });
+    const arrived = S.seen ? got.filter((x) => !S.seen.has(x.id) && x.unread) : [];
+    S.seen = new Set([...(S.seen || []), ...ids]);
+    const before = (S.fresh || []).map((x) => x.id).join();
+    S.fresh = ids.filter((id) => !imp.has(id)).map((id) => S.meta[id]).filter(Boolean);
+    if (arrived.length) {
+      const code = arrived.map(otpOf).find(Boolean); if (code) loadCodes();
+      toast(code ? 'Code ' + code + ' from ' + nameOf(arrived[0].from) : 'New email from ' + nameOf(arrived[0].from), 4000);
     }
-    if (add.length) {
-      S.fresh = add.concat(S.fresh || []).slice(0, 10);
-      add.forEach((x) => setUnread(x.id, true));
-      const code = add.map(otpOf).find(Boolean); if (code) loadCodes();
-      toast(code ? 'Code ' + code + ' from ' + nameOf(add[0].from) : 'New email from ' + nameOf(add[0].from), 4000);
-      if (!$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
-    }
+    if (S.fresh.map((x) => x.id).join() !== before && !$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
   } catch (e) {}
   S.polling = false;
 }
