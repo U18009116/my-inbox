@@ -183,6 +183,9 @@ h2{font:700 22px/1.2 var(--head);letter-spacing:-.02em;margin:32px 0 6px}
 .badge{border-radius:999px;min-width:17px;text-align:center;font-variant-numeric:tabular-nums}
 .msg{background:#111112;border:0;border-radius:16px}
 .imp{border-top:1px solid #1d1d1d}
+.f-count{position:static;grid-column:2;justify-self:start;margin-bottom:10px;padding:5px 9px}
+.f-title{padding-right:0;overflow-wrap:normal;word-break:normal;hyphens:auto}
+main{padding-bottom:28px}
 </style>
 </head>
 <body>
@@ -205,7 +208,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 24;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 25;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
