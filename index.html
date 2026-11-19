@@ -364,7 +364,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 29;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 30;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -433,6 +433,21 @@ async function saveJsonToDrive(name, obj) {
   };
   try { const d = await driveFind(DRIVE_FOLDER, true); await make(d ? [d.id] : null); } catch (e) { await make(null); }
 }
+// Instant alerts: switch this phone to the alert helper's key (Drive › Claude › my-inbox-alerts-key.json)
+async function syncPushKey() {
+  try {
+    if (!('PushManager' in window) || Notification.permission !== 'granted' || !S.token || Date.now() >= S.exp) return;
+    const f = await driveFind('my-inbox-alerts-key.json'); if (!f) return;
+    const k = (await driveRead(f.id)).publicKey;
+    if (!k || localStorageGet('pushkey') === k) return;
+    const reg = await navigator.serviceWorker.ready;
+    const old = await reg.pushManager.getSubscription(); if (old) await old.unsubscribe();
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(k) });
+    await saveJsonToDrive(PUSH_FILE, { subscription: sub.toJSON(), saved_at: new Date().toISOString() });
+    localStorageSet('pushkey', k); localStorageSet('push', '1');
+    toast('Instant alerts are on for this phone', 3500);
+  } catch (e) {}
+}
 async function enablePush(btn) {
   try {
     if (btn) btn.disabled = true;
@@ -440,7 +455,7 @@ async function enablePush(btn) {
     if (perm !== 'granted') { toast('Notifications are blocked. Allow them for this site in Chrome settings, then tap Turn on again.', 5000); if (btn) btn.disabled = false; return; }
     const reg = await navigator.serviceWorker.ready;
     let sub = await reg.pushManager.getSubscription();
-    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(PUSH_KEY) });
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(localStorageGet('pushkey') || PUSH_KEY) });
     await saveJsonToDrive(PUSH_FILE, { subscription: sub.toJSON(), saved_at: new Date().toISOString() });
     localStorageSet('push', '1'); toast('Notifications are on. Your 7am summary will come from My Inbox.', 4000); render();
   } catch (e) { if (btn) btn.disabled = false; toast('Couldn\'t turn on notifications: ' + e.message, 5000); }
@@ -555,6 +570,7 @@ async function start() {
   { const y = window.scrollY; render(); window.scrollTo(0, y); }
   // Notifications allowed but the phone's address never got saved (e.g. sign-in interrupted it): finish quietly now
   if ('PushManager' in window && 'Notification' in window && Notification.permission === 'granted' && localStorageGet('push') !== '1') enablePush(null);
+  setTimeout(syncPushKey, 2500);
 }
 
 // Bottom tab bar: Inbox, Trackers, Search, Cleaned up
