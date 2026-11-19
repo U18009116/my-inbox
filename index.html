@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 46;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 47;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -919,12 +919,12 @@ function inboxTab(page, d, m, emails, trackers) {
 }
 
 function searchTab(page) {
-  const form = el('form', 'search'); const inp = el('input'); inp.type = 'search'; inp.placeholder = 'e.g. graduation certificate'; inp.value = S.query; inp.enterKeyHint = 'search'; inp.setAttribute('aria-label', 'Search your email');
+  const form = el('form', 'search'); const inp = el('input'); inp.type = 'search'; inp.placeholder = 'Try: Takealot invoice last month'; inp.value = S.query; inp.enterKeyHint = 'search'; inp.setAttribute('aria-label', 'Search your email');
   const ic = el('span', 'muted'); ic.innerHTML = ICON.search; ic.firstChild.style.cssText = 'width:20px;height:20px;display:block';
   form.append(ic, inp); form.onsubmit = (e) => { e.preventDefault(); search(inp.value.trim()); inp.blur(); };
   page.append(el('h2', '', 'Search'), form);
   if (S.results) page.append(resultsSection());
-  else page.append(el('p', 'hint', 'Type what you are looking for, like a Takealot invoice or your graduation certificate. PDFs open straight away.'));
+  else page.append(el('p', 'hint', 'Ask in plain words, English or Afrikaans: bank statement last month, photos from Pieter, tickets in December, faktuur van Takealot. PDFs open straight away.'));
 }
 
 const CLEAN_KIND = { advert: 'Advert', newsletter: 'Newsletter', spam: 'Spam' };
@@ -1112,14 +1112,92 @@ async function liveCheck() {
   catch (e) { S.live = null; toast('Couldn\'t reach Gmail: ' + e.message, 4000); }
   S.checking = false; render(); go();
 }
+// ---------- Smart search: understands plain English and Afrikaans (dates, kinds of email, senders, attachments) ----------
+const SEARCH_KINDS = [
+  [/\b(invoices?|faktu(?:ur|re)|bills?|rekenings?|statements?|state)\b/gi, '{invoice faktuur statement rekening "tax invoice" bill}', 'invoices and bills'],
+  [/\b(receipts?|payments?|paid|betalings?|betaal|kwitansies?)\b/gi, '{receipt payment paid betaling "proof of payment"}', 'payments'],
+  [/\b(tickets?|kaartjies?|bookings?|besprekings?|reservations?)\b/gi, '{ticket tickets booking e-ticket reservation kaartjie}', 'tickets and bookings'],
+  [/\b(certificates?|sertifikate?|diplomas?|degree|graduation|gradeplegtigheid)\b/gi, '{certificate sertifikaat diploma graduation degree}', 'certificates'],
+  [/\b(orders?|deliver(?:y|ies)|parcels?|packages?|courier|shipped|bestellings?|aflewerings?|pakkies?)\b/gi, '{order shipped delivery delivered parcel courier tracking}', 'orders and deliveries'],
+  [/\b(codes?|otps?|pins?|verification|passwords?|wagwoord)\b/gi, '{code otp verification pin password}', 'security codes'],
+  [/\b(flights?|boarding|itinerary|vlugte?)\b/gi, '{flight boarding itinerary airline}', 'flights'],
+  [/\b(bank|banking)\b/gi, '{bank fnb absa capitec nedbank investec "standard bank" tymebank}', 'banking'],
+  [/\b(tax|sars|belasting|efiling)\b/gi, '{sars tax efiling belasting}', 'tax'],
+  [/\b(insurance|versekering|polis)\b/gi, '{insurance policy versekering polis}', 'insurance'],
+  [/\b(vehicle|licen[cs]e|lisensie|motor)\b/gi, '{vehicle car licence license motor}', 'vehicle'],
+  [/\b(salary|payslips?|salaris|salarisstrokie)\b/gi, '{payslip salary salaris}', 'pay'],
+];
+const SEARCH_STOP = new Set('find show get fetch search look for me my the a an of to on in at and or please with about email emails mail mails e-pos epos wys soek kry vir die van n een some any where is was all that this those these which what i want need can you jou ek met oor alle from by sent'.split(' '));
+const MONTH_RE = /\b(jan(?:uary|uarie)?|feb(?:ruary|ruarie)?|mar(?:ch)?|maart|apr(?:il)?|may|mei|jun(?:e|ie)?|jul(?:y|ie)?|aug(?:ust|ustus)?|sep(?:t|tember)?|oct(?:ober)?|okt(?:ober)?|nov(?:ember)?|dec(?:ember)?|des(?:ember)?)\b(?:\s+(20\d\d))?/;
+const MONTH_IDX = { jan: 0, feb: 1, mar: 2, maa: 2, apr: 3, may: 4, mei: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11, des: 11 };
+function gDay(d) { return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); }
+function smartQuery(q) {
+  let s = ' ' + String(q).toLowerCase().replace(/[?!,]/g, ' ') + ' ';
+  const parts = [], groups = [], notes = [];
+  const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const shift = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const range = (a, b, label) => { parts.push('after:' + gDay(a) + ' before:' + gDay(b)); notes.push(label); };
+  const cut = (re) => { s = s.replace(re, ' '); };
+  // When
+  if (/\b(today|vandag)\b/.test(s)) { range(today, shift(today, 1), 'today'); cut(/\b(today|vandag)\b/g); }
+  else if (/\b(yesterday|gister)\b/.test(s)) { range(shift(today, -1), today, 'yesterday'); cut(/\b(yesterday|gister)\b/g); }
+  else if (/\b(this|hierdie|die) (week)\b/.test(s)) { parts.push('newer_than:7d'); notes.push('this week'); cut(/\b(this|hierdie|die) week\b/g); }
+  else if (/\b(last|previous|verlede|vorige) week\b/.test(s)) { range(shift(today, -14), shift(today, -7), 'last week'); cut(/\b(last|previous|verlede|vorige) week\b/g); }
+  else if (/\b(this|hierdie|die) (month|maand)\b/.test(s)) { range(new Date(now.getFullYear(), now.getMonth(), 1), shift(today, 1), 'this month'); cut(/\b(this|hierdie|die) (month|maand)\b/g); }
+  else if (/\b(last|previous|verlede|vorige) (month|maand)\b/.test(s)) { range(new Date(now.getFullYear(), now.getMonth() - 1, 1), new Date(now.getFullYear(), now.getMonth(), 1), 'last month'); cut(/\b(last|previous|verlede|vorige) (month|maand)\b/g); }
+  else if (/\b(last|previous|verlede|vorige) (year|jaar)\b/.test(s)) { range(new Date(now.getFullYear() - 1, 0, 1), new Date(now.getFullYear(), 0, 1), 'last year'); cut(/\b(last|previous|verlede|vorige) (year|jaar)\b/g); }
+  else if (/\b(this|hierdie|die) (year|jaar)\b/.test(s)) { range(new Date(now.getFullYear(), 0, 1), shift(today, 1), 'this year'); cut(/\b(this|hierdie|die) (year|jaar)\b/g); }
+  else {
+    const mm = s.match(MONTH_RE);
+    if (mm) {
+      const mi = MONTH_IDX[mm[1].slice(0, 3)] ?? MONTH_IDX[mm[1].slice(0, 3).replace('maa', 'mar')];
+      let y = mm[2] ? +mm[2] : now.getFullYear(); if (!mm[2] && mi > now.getMonth()) y--;
+      range(new Date(y, mi, 1), new Date(y, mi + 1, 1), mm[0].trim()); cut(mm[0]);
+    } else {
+      const ym = s.match(/\b(19|20)\d\d\b/);
+      if (ym) { const y = +ym[0]; range(new Date(y, 0, 1), new Date(y + 1, 0, 1), ym[0]); cut(ym[0]); }
+    }
+  }
+  // Who
+  const fm = s.match(/\b(?:from|van|by|sent by)\s+([a-z0-9.@&'-]+)/);
+  if (fm && !SEARCH_STOP.has(fm[1])) { parts.push('from:' + fm[1]); notes.push('from ' + fm[1]); cut(fm[0]); }
+  // Attachments and state
+  if (/\bpdfs?\b/.test(s)) { parts.push('filename:pdf'); notes.push('PDFs'); cut(/\bpdfs?\b/g); }
+  else if (/\b(attachments?|documents?|docs?|files?|aanhangsels?|dokumente?|le[eë]rs?)\b/.test(s)) { parts.push('has:attachment'); notes.push('with attachments'); cut(/\b(attachments?|documents?|docs?|files?|aanhangsels?|dokumente?|le[eë]rs?)\b/g); }
+  if (/\b(photos?|pictures?|images?|pics?|fotos?|foto's)\b/.test(s)) { parts.push('filename:{jpg jpeg png heic}'); notes.push('photos'); cut(/\b(photos?|pictures?|images?|pics?|fotos?|foto's)\b/g); }
+  if (/\b(unread|ongelees)\b/.test(s)) { parts.push('is:unread'); notes.push('unread'); cut(/\b(unread|ongelees)\b/g); }
+  if (/\b(starred|belangrike?)\b/.test(s)) { parts.push('{is:starred is:important}'); notes.push('important'); cut(/\b(starred|belangrike?)\b/g); }
+  // What kind
+  for (const [re, g, label] of SEARCH_KINDS) { if (new RegExp(re.source, 'i').test(s)) { groups.push(g); notes.push(label); s = s.replace(re, ' '); } }
+  const words = s.split(/[^a-z0-9@.&'-]+/).filter((w) => w.length > 1 && !SEARCH_STOP.has(w));
+  return { parts, groups, words, note: notes.join(', ') };
+}
+// Runs a few searches at once (exact, subject, either word, attachment name, sender), then ranks what matched most
 async function search(q) {
-  S.query = q; if (!q) { S.results = null; render(); return; }
+  S.query = q; S.searchNote = ''; if (!q) { S.results = null; render(); return; }
   S.results = 'loading'; render();
-  // Plain words work; words like "certificate", "pdf", "invoice" also look inside attachments.
-  let gq = q.replace(/^(go\s+)?(fetch|find|get|show|search( for)?|open)\s+(me\s+)?(my\s+)?/i, '');
-  if (/\b(pdf|certificate|invoice|statement|ticket|document|attachment|file)s?\b/i.test(gq)) gq += ' has:attachment';
-  try { S.results = await listThreads(gq, 20); if (!S.results.length) S.results = await listThreads(q, 20); }
-  catch (e) { S.results = []; toast('Search failed: ' + e.message); }
+  const sq = smartQuery(q), base = sq.parts.concat(sq.groups).join(' '), only = sq.parts.join(' '), w = sq.words;
+  const qs = [];
+  if (w.length) {
+    qs.push([3, base + ' ' + w.join(' ')]);
+    qs.push([2, base + ' subject:(' + w.join(' ') + ')']);
+    if (w.length > 1) qs.push([1, base + ' {' + w.join(' ') + '}']);
+    qs.push([2, only + ' has:attachment {' + w.map((x) => 'filename:' + x).join(' ') + '}']);
+    qs.push([2, base + ' from:' + w[0] + (w.length > 1 ? ' ' + w.slice(1).join(' ') : '')]);
+  } else if (base) qs.push([3, base]);
+  else qs.push([3, q]);
+  S.searchNote = 'Looked for ' + ([sq.note, w.length ? '"' + w.join(' ') + '"' : ''].filter(Boolean).join(', ') || '"' + q + '"');
+  try {
+    const lists = await Promise.all(qs.map(([wt, qq]) => gmail('threads?maxResults=20&q=' + encodeURIComponent(qq.trim())).then((r) => [wt, (r.threads || []).map((t) => t.id)]).catch(() => [wt, []])));
+    const score = new Map(), first = new Map(); let n = 0;
+    lists.forEach(([wt, ids]) => ids.forEach((id) => { score.set(id, (score.get(id) || 0) + wt); if (!first.has(id)) first.set(id, n++); }));
+    let top = [...score.keys()].sort((a, b) => (score.get(b) - score.get(a)) || (first.get(a) - first.get(b))).slice(0, 20);
+    if (!top.length) { const r = await gmail('threads?maxResults=20&q=' + encodeURIComponent(q)); top = (r.threads || []).map((t) => t.id); }
+    S.meta = S.meta || {};
+    const need = top.filter((id) => !S.meta[id]);
+    (await Promise.all(need.map(threadMeta))).forEach((x) => { S.meta[x.id] = x; });
+    S.results = top.map((id) => S.meta[id]).filter(Boolean);
+  } catch (e) { S.results = []; toast('Search failed: ' + e.message); }
   render();
 }
 function resultsSection() {
@@ -1128,6 +1206,7 @@ function resultsSection() {
   top.append(el('h2', '', 'Results'));
   const back = el('button', '', 'Done'); back.style.cssText = 'color:var(--blue);font-weight:600;margin-top:16px'; back.onclick = () => { S.results = null; S.query = ''; render(); };
   top.append(back); sec.append(top);
+  if (S.searchNote && S.results !== 'loading') sec.append(el('p', 'hint', S.searchNote));
   const card = el('div', 'card');
   if (S.results === 'loading') card.append(el('div', 'spin'));
   else if (!S.results.length) card.append(el('div', 'empty', 'Nothing found. Try other words.'));
