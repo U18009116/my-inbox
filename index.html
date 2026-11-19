@@ -564,7 +564,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 56;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 57;                          // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1131,6 +1131,8 @@ const SEARCH_KINDS = [
 const SEARCH_STOP = new Set('find show get fetch search look for me my the a an of to on in at and or please with about email emails mail mails e-pos epos wys soek kry vir die van n een some any where is was all that this those these which what i want need can you jou ek met oor alle from by sent bought buy buying purchased purchase paid pay gekoop koop betaal when wanneer got fetch could would please asb thanks dankie mine u jy kan sal wil moet het hê for my me did do does done have has had ever last'.split(' '));
 // Everyday things in Herman's words, expanded to the words shops and invoices actually use (e.g. aircon -> "air conditioner", BTU)
 const SEARCH_CONCEPTS = [
+  [/\b(weigh(?:t)?[ -]?slings?|weigh(?:t)?[ -]?bags?|weegsak(?:ke)?|weigh(?:ing)? stands?)\b/gi, '{"weigh sling" "weigh bag" weighsling "weigh stand" "weighing sling" "retainer sling"}', 'weigh sling'],
+  [/\b(fishing rods?|hengels?|reels?|katrolle?)\b/gi, '{rod rods reel reels hengel}', 'fishing gear'],
   [/\b(aircon(?:s|ditioner)?|air ?cons?|air[- ]conditioner|air[- ]conditioning|lugversorger|lugreëling)\b/gi, '{aircon "air con" "air conditioner" "air conditioning" btu "split unit" "portable air"}', 'aircon'],
   [/\b(fridges?|refrigerators?|yskaste?|freezers?|vrieskaste?)\b/gi, '{fridge refrigerator freezer yskas vrieskas}', 'fridge'],
   [/\b(tvs?|televisions?|televisie)\b/gi, '{tv television "smart tv" qled oled uhd}', 'TV'],
@@ -1274,7 +1276,7 @@ async function search(q) {
           for (let k = 0; p >= 0 && k < 30; k++) { if (/r ?\d[\d ,]*[.,]\d\d/.test(t.slice(p, p + 140))) { bonus += 8; break; } p = t.indexOf(term, p + term.length); } // next to a price, like a line on a receipt
         }
         if (thingTerms.length && !thingTerms.some((x) => t.includes(x))) bonus -= 6; // the thing he named isn't really in it
-        if (w.length) { const hit = w.filter((x) => wv(x).some((y) => wordIn(y, t))).length; bonus += hit * 5; if (!hit) bonus -= 15; } // his own words (e.g. Daiwa, 3M) must be in it; more of them is better
+        if (w.length) { const hit = w.filter((x) => wv(x).some((y) => wordIn(y, t))).length; bonus += hit * 5; if (!hit) bonus -= (thingTerms.length && thingTerms.some((x) => t.includes(x))) ? 5 : 15; } // his own words (e.g. Daiwa, 3M) must be in it; more of them is better
         if (kindTerms.some((x) => t.slice(0, 160).includes(x))) bonus += 3; // the kind of document is in the subject
         if (/what happened in the last|digest|forum|newsletter|weekly|e-bulletin/.test(t.slice(0, 300))) bonus -= 12; // forum digests and newsletters
         score.set(id, (score.get(id) || 0) + bonus);
