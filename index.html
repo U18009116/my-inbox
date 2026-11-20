@@ -603,6 +603,64 @@ html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none
 .sugg button{border:1px solid rgba(255,255,255,.1);background:var(--card);color:#e8e8e8;border-radius:999px;padding:9px 13px;font:500 14px/1.2 var(--body);cursor:pointer;text-align:left}
 .ask-links{display:flex;gap:16px;justify-content:center;margin:4px 0 0}
 .ask-links button{border:0;background:none;color:var(--sub);font:500 13px var(--body);cursor:pointer;padding:6px}
+/* ===== v65 "Paper & sky": calm, solid cards in the same family as the Next up block; smaller type. Glass only for the top bar and tab bar. ===== */
+:root{--ink:#0d1220;--ink2:#38425a;--ink3:#6a7488;--ink4:#9aa3b5;--paper:linear-gradient(180deg,#ffffff,#eef3fb);--hair:#e3e9f3;--paper-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 10px 28px rgba(0,0,0,.35)}
+html,body{font-size:15px}
+h2{font:650 19px/1.2 var(--head)!important;letter-spacing:-.025em!important;margin:26px 4px 10px!important}
+.sec-head{margin:26px 0 10px!important}.sec-head h2{margin:0 4px!important}
+/* Paper surfaces (no glass, no glowing edge) */
+.card,.tcard,.notif{background:var(--paper)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:var(--paper-shadow)!important;color:var(--ink);border-radius:20px!important}
+.card::after,.tcard::after,.notif::after{content:none!important}
+.tcard{transform:none!important;transition:transform .18s var(--out)}
+.tcard:active,.row:active{transform:scale(.985)!important}
+.tlist{gap:10px!important}
+/* Email rows */
+.row{padding:12px 14px 12px 24px!important}
+.row:active{background:#f2f6fd!important}
+.row+.row::before{background:var(--hair)!important;left:66px!important;transform:none!important;height:1px}
+.av{width:36px!important;height:36px!important;background:#e4ecfb!important;color:#1f5fd6!important;box-shadow:none!important;font:600 15px/1 var(--body)!important}
+.from{font:600 14.5px/1.25 var(--body)!important;color:var(--ink)!important;letter-spacing:-.01em}
+.time{font-size:12px!important;color:var(--ink3)!important}
+.subj{font-size:13.5px!important;color:var(--ink2)!important;font-weight:500!important}
+.prev{font-size:13px!important;color:var(--ink3)!important;line-height:1.4}
+.row.read .from,.row.read .subj{color:var(--ink4)!important}.row.read .prev{color:#b4bbc9!important}.row.read .av{opacity:.55}
+.dot{left:9px!important;top:24px!important;width:8px!important;height:8px!important;background:var(--grad,#1f6fff)!important;box-shadow:none!important}
+.empty,.card .empty{color:var(--ink3)!important}
+.row.kv span{color:var(--ink2)}.row.kv b{color:var(--ink)!important;font-size:15px!important}
+.card .btn.ghost,.row .btn.ghost{background:#e4ecfb!important;color:#1f5fd6!important;box-shadow:none!important}
+.code-chip{background:#e4ecfb!important;box-shadow:none!important}.code-chip b{color:var(--ink)!important;font-size:19px!important}.code-chip small{color:#1f5fd6!important}
+.notif .from{color:var(--ink)!important}.notif .prev{color:var(--ink3)!important}
+/* Tracker cards: a little window of sky as the date, like the big card */
+.tcard{padding:12px 12px 12px 12px!important;gap:14px!important;align-items:center!important}
+.tdate{width:58px!important;min-height:64px!important;border-radius:14px!important;position:relative;overflow:hidden;justify-content:flex-start!important;padding-top:10px;background:var(--grad,linear-gradient(180deg,#1f6fff,#8fc6ff))!important;box-shadow:none!important;border:0!important}
+.tdate::after{content:'';position:absolute;left:0;right:0;bottom:0;height:20px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 58 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20V12l9-6 7 5 10-9 9 8 6-4 9 7 8-4v11z' fill='%230d1a3a' fill-opacity='.55'/%3E%3Cpath d='M0 20v-4l12-5 9 4 11-7 10 6 8-3 8 4v5z' fill='%23ffffff' fill-opacity='.9'/%3E%3C/svg%3E") bottom/100% 100% no-repeat}
+.tdate b{font:650 21px/1 var(--head)!important;color:#fff!important;letter-spacing:-.03em!important;position:relative;z-index:1;text-shadow:0 1px 6px rgba(0,30,90,.25)}
+.tdate span{font:600 10.5px/1 var(--body)!important;color:rgba(255,255,255,.92)!important;letter-spacing:.06em!important;text-transform:uppercase;margin-top:3px;position:relative;z-index:1}
+.tcard.read .tdate{opacity:.55!important;filter:saturate(.6)}
+.tstatus{font-size:11.5px!important;color:var(--ink3)!important;letter-spacing:.01em}
+.tname{font:600 15px/1.25 var(--head)!important;color:var(--ink)!important;letter-spacing:-.02em!important;margin:2px 0 1px!important}
+.tsub{font-size:13px!important;color:var(--ink2)!important}
+.tmeta{font-size:12px!important;color:var(--ink3)!important;font-family:var(--mono)}
+.tcard.read .tname,.tcard.read .tsub{color:var(--ink4)!important}.tcard.read .tstatus,.tcard.read .tmeta{color:#b4bbc9!important}
+.tbody{min-width:0;padding-right:40px}
+.go{width:30px!important;height:30px!important;background:var(--ink)!important;color:#fff!important;font-size:16px!important;right:12px!important}
+.cal-chip{background:#e4ecfb!important;color:#1f5fd6!important;font-weight:600}
+.tl i{background:#dfe5ef!important;box-shadow:none!important}.tl i.on{background:var(--grad,#1f6fff)!important}
+.tl-lb{color:var(--ink4)!important}.tl-lb .now{color:var(--ink)!important}
+.recv{box-shadow:none!important}
+.ccard .tdate b{font-size:13px!important}.code-big{color:var(--ink)!important;font-size:21px!important}.ccard.read .code-big{color:var(--ink4)!important}
+/* Next up: slightly smaller title to match */
+.f-title{font-size:20px!important}
+/* Filters: quieter, smaller */
+.seg button{padding:9px 12px!important;font-size:13px!important;border-radius:12px!important}
+/* Ask: the PA's answers on paper too */
+.bub{font-size:14.5px!important}
+.bub.pa{background:var(--paper)!important;color:var(--ink)!important;border:0!important;box-shadow:var(--paper-shadow)}
+.bub.pa.err{color:#b3261e!important}
+.bub .src{background:#e4ecfb!important;color:#1f5fd6!important}
+.bub .meta{color:var(--ink4)!important}
+.sugg button{font-size:13.5px!important}
+/* Settings and the email reader keep their dark look */
 </style>
 </head>
 <body>
@@ -629,7 +687,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 64;                   // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 65;                  // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
