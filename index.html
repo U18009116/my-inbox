@@ -564,6 +564,20 @@ html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none
 .keybox input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#101216;color:#fff;font:15px var(--mono,monospace)}
 .set-val.ok{color:var(--green)}
 .cal-chip{display:inline-block;margin-left:6px;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--fill);color:var(--sub);vertical-align:1px}
+/* v61 swipe left to hide (app only) + 10-second Undo */
+.swipe{touch-action:pan-y!important;will-change:transform}
+.swipe.dragging{transition:none!important}
+.swipe.dragging,.swipe.dragging *{cursor:grabbing}
+.swipe.back{animation:swback .38s var(--out,ease) both}
+@keyframes swback{from{transform:translateX(-60px);opacity:0}to{transform:none;opacity:1}}
+.undo{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));z-index:40;width:calc(100% - 32px);max-width:420px;transform:translate(-50%,0);display:flex;align-items:center;gap:12px;padding:12px 12px 12px 16px;border-radius:16px;background:rgba(30,33,41,.96);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 30px rgba(0,0,0,.45);color:#fff;font:500 15px/1.3 var(--body);overflow:hidden;animation:undoin .28s var(--out,ease)}
+.undo.out{animation:undoout .22s ease forwards}
+.undo span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undo button{border:0;border-radius:999px;padding:9px 16px;background:var(--grad,var(--acc));color:#fff;font:600 15px/1 var(--body);cursor:pointer}
+.undo i{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--grad,var(--acc));transform-origin:left;animation:undotime 10s linear forwards}
+@keyframes undoin{from{transform:translate(-50%,24px);opacity:0}}
+@keyframes undoout{to{transform:translate(-50%,24px);opacity:0}}
+@keyframes undotime{to{transform:scaleX(0)}}
 </style>
 </head>
 <body>
@@ -590,7 +604,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 60;                       // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 61;                      // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -825,6 +839,70 @@ async function loadCal() {
 }
 function connectCal() { localStorageSet('cal', '1'); goSignIn(false); } // Google asks once to allow reading the calendar, then comes straight back
 
+// ---------- Swipe left to hide (in the app only; Gmail is never touched) + 10-second Undo ----------
+// Keys: e:<thread> emails, t:<tracker> trackers, c:<thread> codes, x:<thread> cleaned-up rows, s:<thread> search results (this search only)
+S.hidden = (() => { try { const h = JSON.parse(localStorageGet('hidden') || '{}'), cut = Date.now() - 45 * 864e5; Object.keys(h).forEach((k) => { if (h[k] < cut) delete h[k]; }); return h; } catch (e) { return {}; } })();
+S.tmpHidden = new Set();
+const isHidden = (k) => !!S.hidden[k] || S.tmpHidden.has(k);
+const tkey = (t) => 't:' + (t.id || trackerThread(t) || t.title);
+function redraw() { if ($('reader').classList.contains('open')) return; const y = window.scrollY; render(); window.scrollTo(0, y); }
+function setHidden(k, on, temp) {
+  if (temp) { if (on) S.tmpHidden.add(k); else S.tmpHidden.delete(k); return; }
+  if (on) S.hidden[k] = Date.now(); else delete S.hidden[k];
+  localStorageSet('hidden', JSON.stringify(S.hidden));
+}
+function swipeable(node, key, what, temp) {
+  node.classList.add('swipe'); node.dataset.key = key;
+  let x0 = null, y0 = 0, dx = 0, t0 = 0, pid = null, decided = false, dragging = false;
+  node.addEventListener('pointerdown', (e) => { if (e.button || node._busy) return; x0 = e.clientX; y0 = e.clientY; dx = 0; t0 = performance.now(); pid = e.pointerId; decided = false; dragging = false; });
+  node.addEventListener('pointermove', (e) => {
+    if (x0 == null || e.pointerId !== pid) return;
+    const mx = e.clientX - x0, my = e.clientY - y0;
+    if (!decided) {
+      if (Math.abs(mx) < 8 && Math.abs(my) < 8) return;
+      decided = true; dragging = mx < 0 && Math.abs(mx) > Math.abs(my) * 1.2; // only a sideways pull to the left; up/down stays normal scrolling
+      if (!dragging) { x0 = null; return; }
+      try { node.setPointerCapture(pid); } catch (err) {}
+      node.classList.add('dragging');
+    }
+    dx = mx < 0 ? mx : mx / 6; // follows the finger to the left, resists to the right
+    node.style.transform = 'translateX(' + dx + 'px)';
+    node.style.opacity = String(1 - Math.min(0.55, Math.max(0, -dx) / node.offsetWidth));
+  });
+  const end = () => {
+    if (x0 == null) return; x0 = null;
+    if (!dragging) return; dragging = false; node.classList.remove('dragging'); node._swiped = Date.now();
+    const w = node.offsetWidth || 300, v = dx / Math.max(1, performance.now() - t0);
+    if (dx < -w * 0.4 || (v < -0.6 && dx < -w * 0.22)) dismissSwipe(node, key, what, temp); // a long pull, or a quick flick past about a fifth of the width
+    else { node.style.transition = 'transform .3s var(--out), opacity .3s'; node.style.transform = ''; node.style.opacity = ''; setTimeout(() => { node.style.transition = ''; }, 320); }
+  };
+  node.addEventListener('pointerup', end); node.addEventListener('pointercancel', end);
+  node.addEventListener('click', (e) => { if (node._swiped && Date.now() - node._swiped < 450) { e.stopPropagation(); e.preventDefault(); } }, true); // a swipe is not a tap
+}
+function dismissSwipe(node, key, what, temp) {
+  node._busy = true;
+  node.style.transition = 'transform .22s var(--out), opacity .22s'; node.style.transform = 'translateX(-110%)'; node.style.opacity = '0';
+  setTimeout(() => {
+    // fold the gap closed, then hide it for good (in the app only)
+    const h = node.offsetHeight; node.style.height = h + 'px'; node.style.overflow = 'hidden'; void node.offsetHeight;
+    node.style.transition = 'height .2s ease, padding .2s ease, margin .2s ease'; node.style.height = '0px'; node.style.paddingTop = '0px'; node.style.paddingBottom = '0px'; node.style.marginTop = '0px'; node.style.marginBottom = '0px';
+    setTimeout(() => { setHidden(key, true, temp); redraw(); showUndo(key, what, temp); }, 210);
+  }, 220);
+}
+function showUndo(key, what, temp) {
+  const old = $('undo'); if (old) { clearTimeout(old._t); old.remove(); } // a new swipe makes the previous one final
+  const bar = el('div', 'undo'); bar.id = 'undo'; bar.setAttribute('role', 'status');
+  const b = el('button', '', 'Undo');
+  bar.append(el('span', '', (what || 'Item') + ' hidden'), b, el('i'));
+  const close = () => { clearTimeout(bar._t); bar.classList.add('out'); setTimeout(() => bar.remove(), 230); };
+  b.onclick = () => {
+    close(); setHidden(key, false, temp); redraw();
+    const n = document.querySelector('[data-key="' + CSS.escape(key) + '"]'); if (n) { n.classList.add('back'); setTimeout(() => n.classList.remove('back'), 420); }
+  };
+  bar._t = setTimeout(close, 10000);
+  document.body.append(bar);
+}
+
 // ---------- Run agent (uses extra Claude credits, so it always asks first) ----------
 function runBusy() { return Date.now() - Number(localStorageGet('runat') || 0) < 8 * 60e3; }
 function modal(title, lines, goText, onGo, noText) {
@@ -886,15 +964,15 @@ const TABS = [['inbox', 'Inbox'], ['trackers', 'Trackers'], ['search', 'Search']
 function render() {
   const app = $('app'); app.replaceChildren();
   const d = S.data || {}; const m = d.morning || {};
-  const emails = Array.isArray(m.emails) ? m.emails : [];
+  const emails = (Array.isArray(m.emails) ? m.emails : []).filter((x) => !isHidden('e:' + (x.id || x.thread_id))); // swiped away in the app
   const trackers = (Array.isArray(d.trackers) ? d.trackers : (d.trackers && Array.isArray(d.trackers.items) ? d.trackers.items : [])).concat(localStorageGet('cal') === '1' ? (S.cal || cachedCal() || []) : []);
   S.tab = S.tab || localStorageGet('tab') || 'inbox';
   if (S.results && S.tab !== 'search') S.tab = 'search';
 
   // Top bar: date, wordmark, and a red pill for what needs you
-  const ids = new Set(emails.map((x) => x.id || x.thread_id)); (S.live || []).forEach((x) => ids.add(x.id));
+  const ids = new Set(emails.map((x) => x.id || x.thread_id)); (S.live || []).forEach((x) => { if (!isHidden('e:' + x.id)) ids.add(x.id); });
   const unreadN = [...ids].filter(isUnread).length;
-  const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length + (S.codes || []).filter((c) => Date.now() - c.ts < 15 * 60e3).length;
+  const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length + (S.codes || []).filter((c) => !isHidden('c:' + c.id) && Date.now() - c.ts < 15 * 60e3).length;
   const top = el('header', 'topbar');
   // Run agent: starts the email agent now (asks first, because it uses extra Claude credits)
   const busy = runBusy(); const pill = el('button', 'runbtn' + (busy ? ' busy' : ''));
@@ -945,6 +1023,7 @@ function openTrackers(list) {
   // Trackers stay until their date has passed, then drop off (ones without a date stay until done)
   const today = new Date(new Date().toDateString()), limit = new Date(today.getTime() + (WINDOW_DAYS + 1) * 864e5);
   return list.filter((t) => !(S.feedback && S.feedback['recv:' + (trackerThread(t) || t.title)])) // Herman tapped Received
+    .filter((t) => !isHidden(tkey(t))) // swiped away in the app
     .filter((t) => !(['meeting', 'ticket', 'booking'].includes(t.kind) && t.date && !isNaN(new Date(t.date)) && new Date(t.date) >= limit)) // events more than 2 weeks away wait in the calendar
     .filter((t) => (t.date && !isNaN(new Date(t.date))) ? !trackerOver(t) : !['delivered', 'paid', 'cancelled'].includes(t.status));
 }
@@ -966,7 +1045,8 @@ function inboxTab(page, d, m, emails, trackers) {
   }
 
   // Just arrived: new mail spotted while the app is open (security codes show big)
-  if (S.fresh && S.fresh.length) { page.append(el('h2', '', 'New since ' + (d.updated_at ? when(Date.parse(d.updated_at)) : 'yesterday'))); const fc = el('div', 'card'); S.fresh.forEach((x) => fc.append(emailRow(x))); page.append(fc); }
+  const fresh = (S.fresh || []).filter((x) => !isHidden('e:' + x.id));
+  if (fresh.length) { page.append(el('h2', '', 'New since ' + (d.updated_at ? when(Date.parse(d.updated_at)) : 'yesterday'))); const fc = el('div', 'card'); fresh.forEach((x) => fc.append(emailRow(x))); page.append(fc); }
 
   // Featured: the next thing coming up
   const nx = nextUp(trackers);
@@ -983,17 +1063,19 @@ function inboxTab(page, d, m, emails, trackers) {
     f.append(el('span', 'f-go', '→'));
     const tid = trackerThread(nx); if (tid) f.onclick = () => (['ticket', 'booking'].includes(nx.kind) ? openTicket(tid, nx.title) : openThread(tid, nx.title));
     else if (nx.cal_url) f.onclick = () => window.open(nx.cal_url, '_blank');
+    swipeable(f, tkey(nx), 'Next up');
     page.append(f);
   }
 
   // New mail (from pulling down)
   if (S.checking || S.live) {
     const sec = el('section'); sec.id = 'new-mail';
-    sec.append(el('h2', '', S.checking ? 'Checking Gmail…' : (S.live.length ? S.live.length + ' unread' : 'New mail')));
+    const live = (S.live || []).filter((x) => !isHidden('e:' + x.id));
+    sec.append(el('h2', '', S.checking ? 'Checking Gmail…' : (live.length ? live.length + ' unread' : 'New mail')));
     const c = el('div', 'card');
     if (S.checking) c.append(el('div', 'spin'));
-    else if (!S.live.length) c.append(el('div', 'empty', 'No new mail.'));
-    else S.live.forEach((x) => c.append(emailRow(x)));
+    else if (!live.length) c.append(el('div', 'empty', 'No new mail.'));
+    else live.forEach((x) => c.append(emailRow(x)));
     sec.append(c); page.append(sec);
   }
 
@@ -1045,7 +1127,7 @@ function cleanTab(page, d, m) {
 
   // Who was cleaned up, with a way to bring a sender back
   page.append(el('h2', '', 'Senders cleaned up'));
-  const list = Array.isArray(m.cleaned) ? m.cleaned : [];
+  const list = (Array.isArray(m.cleaned) ? m.cleaned : []).filter((x) => !isHidden('x:' + (x.thread_id || x.subject)));
   const sc = el('div', 'card');
   if (!list.length) sc.append(el('div', 'empty', 'The list of senders shows here after the next 7am run.'));
   list.forEach((x) => {
@@ -1066,7 +1148,7 @@ function cleanTab(page, d, m) {
       } catch (e) { b.disabled = false; toast('Couldn\'t change it: ' + e.message); }
     };
     if (x.thread_id) { mm.setAttribute('role', 'button'); mm.style.cursor = 'pointer'; mm.onclick = () => openThread(x.thread_id, x.subject || ''); } // open it to judge for yourself
-    r.append(avatar(x.from || x.from_email), mm, b); sc.append(r);
+    r.append(avatar(x.from || x.from_email), mm, b); swipeable(r, 'x:' + (x.thread_id || x.subject), 'Email'); sc.append(r);
   });
   page.append(sc);
   if (list.length) page.append(el('p', 'hint', 'Tap a sender to read the email.'));
@@ -1083,6 +1165,7 @@ function codeCard(c) {
   const cp = el('button', 'btn small-btn', 'Copy');
   cp.onclick = async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(c.code); toast('Code copied'); } catch (err) { toast('Code: ' + c.code, 5000); } };
   r.append(lead, mm, cp); r.onclick = () => openThread(c.id, c.title);
+  swipeable(r, 'c:' + c.id, 'Code');
   return r;
 }
 async function loadCodes() {
@@ -1105,7 +1188,7 @@ function trackerSection(list) {
   sec.append(el('h2', '', 'Trackers'));
   const open = openTrackers(list);
   const seg = el('div', 'seg');
-  const codes = S.codes || [];
+  const codes = (S.codes || []).filter((c) => !isHidden('c:' + c.id));
   [['all', 'All'], ['code', 'Codes'], ['delivery', 'Deliveries'], ['ticket', 'Tickets'], ['meeting', 'Meetings'], ['bill', 'Bills']].forEach(([k, label]) => {
     const n = k === 'all' ? open.length + codes.length : k === 'code' ? codes.length : open.filter((t) => groupOf(t.kind) === k).length;
     const on = S.kind === k;
@@ -1154,6 +1237,7 @@ function trackerSection(list) {
     r.append(lead, mm, el('span', 'go', '›'));
     const tid = trackerThread(t); if (tid) r.onclick = () => (['ticket', 'booking'].includes(t.kind) ? openTicket(tid, t.title) : openThread(tid, t.title));
     else if (t.cal_url) r.onclick = () => window.open(t.cal_url, '_blank'); // opens the event in Google Calendar
+    swipeable(r, tkey(t), t.cal ? 'Event' : 'Tracker');
     listEl.append(r);
   });
   if (trOpen) sec.append(listEl); return sec;
@@ -1182,7 +1266,7 @@ function importanceBox(key, info) {
   return box;
 }
 
-function emailRow(x) {
+function emailRow(x, kind) {
   const unread = S.unreadIds ? S.unreadIds.has(x.id) : (x.unread !== undefined ? x.unread : true);
   const r = el('div', 'row' + (unread ? '' : ' read')); r.dataset.id = x.id;
   if (unread) r.append(el('span', 'dot'));
@@ -1199,6 +1283,8 @@ function emailRow(x) {
   const fb = S.feedback[x.id] && S.feedback[x.id].verdict;
   if (fb) mm.append(el('p', 'prev', IMP_LABEL[fb]));
   r.append(avatar(x.from), mm);
+  // Swipe left: hidden in the app only (search results: just for this search). Gmail is not changed.
+  swipeable(r, (kind || 'e') + ':' + x.id, 'Email', kind === 's');
   return r;
 }
 
@@ -1416,7 +1502,7 @@ function resultsSection() {
   const card = el('div', 'card');
   if (S.results === 'loading') card.append(el('div', 'spin'));
   else if (!S.results.length) card.append(el('div', 'empty', 'Nothing found. Try other words.'));
-  else S.results.forEach((x) => card.append(emailRow(x)));
+  else S.results.filter((x) => !isHidden('s:' + x.id)).forEach((x) => card.append(emailRow(x, 's')));
   sec.append(card); return sec;
 }
 
