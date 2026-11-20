@@ -590,7 +590,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 58;                         // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 59;                        // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -859,11 +859,14 @@ function runKeyPage() {
   $('r-title').textContent = 'Run agent key';
   const box = el('div', 'keybox');
   box.append(el('p', '', 'This key lets the Run button start your email agent. It is saved in your own Google Drive (Claude folder) and only your alert helper reads it.'));
-  const inp = el('input'); inp.type = 'password'; inp.placeholder = 'Paste the key here (starts with sk-ant-oat01-)'; inp.autocomplete = 'off'; inp.spellcheck = false;
+  const inp = el('input'); inp.type = 'password'; inp.placeholder = 'Paste the key here (starts with sk-ant-)'; inp.autocomplete = 'off'; inp.spellcheck = false;
   const btn = el('button', 'btn', 'Save key');
   btn.onclick = async () => {
-    const k = inp.value.trim();
-    if (!/^sk-ant-oat01-[\w-]{20,}$/.test(k)) { toast('That doesn’t look like the agent key. It starts with sk-ant-oat01-', 4500); return; }
+    const raw = inp.value.trim().replace(/^["']|["']$/g, '');
+    if (/^https?:/i.test(raw)) { toast('That is the web address (Fire URL), not the key. Copy the long code under “Token” instead.', 6000); return; }
+    const hit = raw.match(/sk-ant-[A-Za-z0-9_-]{20,}/); // finds the key even if extra words were copied with it
+    const k = hit ? hit[0] : (raw.length >= 30 && !/\s/.test(raw) ? raw : '');
+    if (!k) { toast('That doesn’t look like the agent key. It is a long code starting with sk-ant-', 5000); return; }
     btn.disabled = true; btn.textContent = 'Saving…';
     try { await saveJsonToDrive(RUN_KEY_FILE, { token: k, saved_at: new Date().toISOString() }); localStorageSet('runkey', '1'); inp.value = ''; toast('Key saved. The Run button is ready.', 3500); S.sub = null; settingsList(); }
     catch (e) { btn.disabled = false; btn.textContent = 'Save key'; toast('Couldn’t save: ' + e.message, 5000); }
