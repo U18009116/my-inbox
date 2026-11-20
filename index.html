@@ -595,6 +595,10 @@ html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none
 .askbar input{flex:1;min-width:0;border:0;background:transparent;color:#fff;font:16px var(--body);outline:none;padding:8px 0}
 .askbar button{flex:none;width:40px;height:40px;border:0;border-radius:50%;background:var(--grad,var(--acc));color:#fff;display:grid;place-items:center;cursor:pointer}
 .askbar button:disabled{opacity:.4}
+.askbar .mic{background:var(--fill)}
+.askbar .mic.on{background:#ff453a;animation:micpulse 1.2s ease-in-out infinite}
+@keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,69,58,.55)}50%{box-shadow:0 0 0 8px rgba(255,69,58,0)}}
+.askbar .lang{width:auto;height:30px;padding:0 9px;border-radius:999px;background:transparent;border:1px solid rgba(255,255,255,.18);color:var(--sub);font:600 12px/1 var(--body)}
 .sugg{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
 .sugg button{border:1px solid rgba(255,255,255,.1);background:var(--card);color:#e8e8e8;border-radius:999px;padding:9px 13px;font:500 14px/1.2 var(--body);cursor:pointer;text-align:left}
 .ask-links{display:flex;gap:16px;justify-content:center;margin:4px 0 0}
@@ -625,7 +629,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 63;                    // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 64;                   // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1148,7 +1152,27 @@ function searchTab(page) {
   page.append(chat);
   const form = el('form', 'askbar'); const inp = el('input'); inp.type = 'text'; inp.placeholder = 'Ask your PA…'; inp.enterKeyHint = 'send'; inp.autocomplete = 'off'; inp.setAttribute('aria-label', 'Ask your PA');
   const go = el('button'); go.type = 'submit'; go.setAttribute('aria-label', 'Send'); go.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'; go.disabled = !!S.asking;
-  form.append(inp, go); form.onsubmit = (e) => { e.preventDefault(); const q = inp.value.trim(); if (q && !S.asking) askPA(q); };
+  form.append(inp);
+  // Voice: Chrome's own speech-to-text (free; uses no AI questions or Claude credits). EN/AF switches the language.
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SR) {
+    const lang = el('button', 'lang', localStorageGet('voice') === 'af' ? 'AF' : 'EN'); lang.type = 'button'; lang.setAttribute('aria-label', 'Voice language');
+    lang.onclick = () => { const af = localStorageGet('voice') !== 'af'; localStorageSet('voice', af ? 'af' : 'en'); lang.textContent = af ? 'AF' : 'EN'; toast(af ? 'Voice: Afrikaans' : 'Voice: English'); };
+    const mic = el('button', 'mic'); mic.type = 'button'; mic.setAttribute('aria-label', 'Speak your question'); mic.disabled = !!S.asking;
+    mic.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+    mic.onclick = () => {
+      if (S.rec) { S.rec.stop(); return; }
+      const rec = new SR(); S.rec = rec; let finalText = '';
+      rec.lang = localStorageGet('voice') === 'af' ? 'af-ZA' : 'en-ZA'; rec.interimResults = true; rec.continuous = false; rec.maxAlternatives = 1;
+      rec.onstart = () => { mic.classList.add('on'); inp.placeholder = rec.lang === 'af-ZA' ? 'Praat nou…' : 'Listening…'; };
+      rec.onresult = (e) => { let t = ''; for (let i = 0; i < e.results.length; i++) { t += e.results[i][0].transcript; if (e.results[i].isFinal) finalText = t; } inp.value = t; };
+      rec.onerror = (e) => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') toast('Allow the microphone for this site in Chrome, then try again.', 5000); else if (e.error === 'no-speech') toast('I didn’t hear anything. Tap the mic and speak.'); else if (e.error === 'language-not-supported') toast('That voice language isn’t available on this phone. Switch EN/AF.', 5000); };
+      rec.onend = () => { S.rec = null; mic.classList.remove('on'); inp.placeholder = 'Ask your PA…'; const q = (finalText || inp.value).trim(); if (q && !S.asking) { inp.value = ''; askPA(q); } };
+      try { rec.start(); } catch (err) { S.rec = null; toast('Couldn’t start the microphone: ' + err.message); }
+    };
+    form.append(lang, mic);
+  }
+  form.append(go); form.onsubmit = (e) => { e.preventDefault(); const q = inp.value.trim(); if (q && !S.asking) askPA(q); };
   page.append(form);
   const links = el('div', 'ask-links');
   const sh = el('button', '', 'Show matching emails'); sh.onclick = () => { const q = inp.value.trim() || lastQuestion(); if (q) search(q); else toast('Type what to look for first'); };
