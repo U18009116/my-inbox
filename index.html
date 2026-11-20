@@ -625,7 +625,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 62;                     // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 63;                    // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1161,9 +1161,14 @@ function loadChat() { try { const a = JSON.parse(localStorageGet('chat') || '[]'
 function saveChat() { localStorageSet('chat', JSON.stringify((S.chat || []).slice(-20))); }
 function lastQuestion() { const m = (S.chat || []).filter((x) => x.role === 'me').pop(); return m ? m.text : ''; }
 function bubble(m) {
-  const b = el('div', 'bub ' + (m.role === 'me' ? 'me' : 'pa') + (m.err ? ' err' : ''), m.text);
+  const b = el('div', 'bub ' + (m.role === 'me' ? 'me' : 'pa') + (m.err ? ' err' : ''));
+  if (m.role === 'me' || m.err) b.textContent = m.text;
+  else { // simple formatting from the AI: **bold** and bullet lists (everything else stays plain text)
+    const esc = String(m.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    b.innerHTML = esc.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/^\s*[-*]\s+/gm, '• ').replace(/^#+\s*/gm, '').replace(/\n{3,}/g, '\n\n');
+  }
   if (m.srcs && m.srcs.length) { const s = el('div', 'srcs'); m.srcs.forEach((x) => { const c = el('button', 'src', '✉ ' + (x.title || 'Email')); c.onclick = () => openThread(x.id, x.title); s.append(c); }); b.append(s); }
-  if (m.model) b.append(el('span', 'meta', 'Answered by ' + m.model.replace(/:free$/, '').split('/').pop()));
+  if (m.model) b.append(el('span', 'meta', 'Answered by ' + m.model.replace(/:free$/, '').split('/').pop() + (m.backup ? ' (backup, Google was busy)' : '')));
   return b;
 }
 const AI_KEY_FILE = 'pocket-pa-ai-key.json';
@@ -1207,7 +1212,8 @@ async function askPA(q) {
     // 1) Find the emails that matter (the smart search), and read the best few
     let ids = await search(q, { quiet: true });
     if (!ids.length && S.chat.length > 2) ids = await search(lastQuestionBefore(q) + ' ' + q, { quiet: true });
-    ids = ids.slice(0, 6);
+    const ownSummary = (id) => { const m = (S.meta || {})[id] || {}; return /^\s*(☀|✅|📬|🔔)/.test(m.title || '') && /herman13\.hvz/i.test(m.from || ''); }; // the agent's own old summary emails are not sources
+    ids = ids.filter((id) => !ownSummary(id)).slice(0, 6);
     const texts = await mapLimit(ids, 3, threadText);
     S.meta = S.meta || {};
     const emails = ids.map((id, i) => ({ id, m: S.meta[id] || {}, t: texts[i] || '' })).filter((x) => x.t);
@@ -1237,20 +1243,27 @@ async function askPA(q) {
     const messages = [{ role: 'system', content: sys }, ...hist, { role: 'user', content: ctx + '\n\nQUESTION: ' + q }];
     // 4) Ask a free model; if one is busy, try the next
     S.asking = 'Thinking…'; render();
-    const models = await freeModels(); let ans = '', used = '', lastErr = '';
-    for (const model of models.slice(0, 5)) {
+    // Herman's choice (2026-11-20): Google's private models first (they don't learn from his data), retried once when busy;
+    // only if they're all busy, a backup model that may learn from what is sent (the answer then says so)
+    const models = await freeModels(); let ans = '', used = '', lastErr = '', backup = false;
+    const priv = models.filter((m) => /^google\//.test(m)), rest = models.filter((m) => !/^google\//.test(m));
+    const tries = [...priv.map((m) => [m, true]), ...priv.slice(0, 1).map((m) => [m, true, 2500]), ...rest.slice(0, 4).map((m) => [m, false])];
+    for (const [model, isPrivate, wait] of tries) {
+      if (wait) await new Promise((res) => setTimeout(res, wait));
+      if (!isPrivate) S.asking = 'Google is busy, asking a backup AI…';
       try {
-        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://u18009116.github.io/my-inbox/', 'X-Title': 'Pocket PA' }, body: JSON.stringify({ model, messages, temperature: 0.2, max_tokens: 700, provider: { data_collection: 'deny' } }) });
+        const r = await fetch('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'application/json', 'HTTP-Referer': 'https://u18009116.github.io/my-inbox/', 'X-Title': 'Pocket PA' }, body: JSON.stringify(Object.assign({ model, messages, temperature: 0.2, max_tokens: 900 }, isPrivate ? { provider: { data_collection: 'deny' } } : {})) });
         const j = await r.json().catch(() => ({}));
         if (r.status === 401) { lastErr = 'key'; break; }
         if (!r.ok || !j.choices || !j.choices[0]) { lastErr = (j.error && j.error.message) || ('HTTP ' + r.status); continue; }
-        ans = String(j.choices[0].message.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim(); used = model; if (ans) break;
+        ans = String(j.choices[0].message.content || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim(); used = model; backup = !isPrivate; if (ans) break;
       } catch (e) { lastErr = e.message; }
     }
     if (!ans) throw new Error(lastErr === 'key' ? 'The PA key isn’t working. Make a new one and save it in Settings › PA key.' : 'All the free AI models are busy right now (' + lastErr + '). Try again in a minute.');
     const cited = [...new Set((ans.match(/\[(\d+)\]/g) || []).map((x) => +x.slice(1, -1)))].filter((n) => n >= 1 && n <= emails.length);
     const srcs = cited.map((n) => ({ id: emails[n - 1].id, title: emails[n - 1].m.title || emails[n - 1].m.from || 'Email' }));
-    S.chat.push({ role: 'pa', text: ans.replace(/\s*\[(\d+)\]/g, (s, n) => (+n >= 1 && +n <= emails.length ? ' [' + n + ']' : '')), srcs, model: used });
+    const clean = ans.replace(/\s*\[(?:tracker|trackers|calendar|cal)[^\]]*\]/gi, '').replace(/\s*\[(\d+)\]/g, (s, n) => (+n >= 1 && +n <= emails.length ? ' [' + n + ']' : '')).replace(/\]\s*\[/g, '][');
+    S.chat.push({ role: 'pa', text: clean, srcs, model: used, backup });
   } catch (e) { S.chat.push({ role: 'pa', text: e.message || 'Something went wrong.', err: true }); }
   S.asking = null; saveChat(); if (S.tab === 'search') render();
 }
