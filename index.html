@@ -590,7 +590,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 59;                        // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 60;                       // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -806,7 +806,7 @@ function cachedCal() { try { return JSON.parse(localStorageGet('cal_items') || '
 async function loadCal() {
   if (localStorageGet('cal') !== '1' || !S.token || Date.now() >= S.exp) return;
   try {
-    const from = new Date(new Date().toDateString()), to = new Date(from.getTime() + 60 * 864e5);
+    const from = new Date(new Date().toDateString()), to = new Date(from.getTime() + (WINDOW_DAYS + 1) * 864e5);
     const q = new URLSearchParams({ timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '60' });
     const r = await (await api('https://www.googleapis.com/calendar/v3/calendars/primary/events?' + q)).json();
     const pad = (n) => String(n).padStart(2, '0');
@@ -940,10 +940,12 @@ function trackerOver(t) {
 function redrawIfIdle() { if (document.visibilityState === 'visible' && S.data && !$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); } }
 setInterval(redrawIfIdle, 5 * 60e3);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') redrawIfIdle(); });
+const WINDOW_DAYS = 14; // Herman: only the next two weeks of events in the app (the rest is in his calendar)
 function openTrackers(list) {
   // Trackers stay until their date has passed, then drop off (ones without a date stay until done)
-  const today = new Date(new Date().toDateString());
+  const today = new Date(new Date().toDateString()), limit = new Date(today.getTime() + (WINDOW_DAYS + 1) * 864e5);
   return list.filter((t) => !(S.feedback && S.feedback['recv:' + (trackerThread(t) || t.title)])) // Herman tapped Received
+    .filter((t) => !(['meeting', 'ticket', 'booking'].includes(t.kind) && t.date && !isNaN(new Date(t.date)) && new Date(t.date) >= limit)) // events more than 2 weeks away wait in the calendar
     .filter((t) => (t.date && !isNaN(new Date(t.date))) ? !trackerOver(t) : !['delivered', 'paid', 'cancelled'].includes(t.status));
 }
 function trackerThread(t) { return t.thread_id || t.threadId || (String(t.gmail_url || '').match(/#[a-z]+\/([0-9a-f]{10,})/i) || [])[1]; }
@@ -1573,7 +1575,7 @@ function settingsList() {
   const calOn = localStorageGet('cal') === '1';
   const ca = el('button', 'set-row'); ca.append(el('span', '', 'Google Calendar'), el('span', 'set-val' + (calOn ? ' ok' : ''), calOn ? 'Connected' : 'Connect'), el('span', 'set-chev', '›'));
   ca.onclick = () => calOn
-    ? modal('Google Calendar is connected', [['Your calendar events for the next 60 days show on Trackers under Meetings, and in Next up.']], 'Disconnect', () => { localStorageSet('cal', ''); localStorageSet('cal_items', ''); S.cal = null; settingsList(); render(); }, 'Keep it')
+    ? modal('Google Calendar is connected', [['Your calendar events for the next two weeks show on Trackers under Meetings, and in Next up.']], 'Disconnect', () => { localStorageSet('cal', ''); localStorageSet('cal_items', ''); S.cal = null; settingsList(); render(); }, 'Keep it')
     : modal('Connect Google Calendar?', [['Your own calendar events will show on Trackers and in Next up. Pocket PA can only read the calendar, never change it.'], ['Google will ask you once to allow this.']], 'Connect', connectCal, 'Not now');
   // Run agent key
   const rk = el('button', 'set-row'); const hasK = localStorageGet('runkey') === '1';
