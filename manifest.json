@@ -1,6 +1,6 @@
 {
-  "name": "My Inbox",
-  "short_name": "My Inbox",
+  "name": "Pocket PA",
+  "short_name": "Pocket PA",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
