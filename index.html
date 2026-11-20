@@ -603,64 +603,157 @@ html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none
 .sugg button{border:1px solid rgba(255,255,255,.1);background:var(--card);color:#e8e8e8;border-radius:999px;padding:9px 13px;font:500 14px/1.2 var(--body);cursor:pointer;text-align:left}
 .ask-links{display:flex;gap:16px;justify-content:center;margin:4px 0 0}
 .ask-links button{border:0;background:none;color:var(--sub);font:500 13px var(--body);cursor:pointer;padding:6px}
-/* ===== v65 "Paper & sky": calm, solid cards in the same family as the Next up block; smaller type. Glass only for the top bar and tab bar. ===== */
-:root{--ink:#0d1220;--ink2:#38425a;--ink3:#6a7488;--ink4:#9aa3b5;--paper:linear-gradient(180deg,#ffffff,#eef3fb);--hair:#e3e9f3;--paper-shadow:0 1px 0 rgba(255,255,255,.6) inset,0 10px 28px rgba(0,0,0,.35)}
-html,body{font-size:15px}
-h2{font:650 19px/1.2 var(--head)!important;letter-spacing:-.025em!important;margin:26px 4px 10px!important}
-.sec-head{margin:26px 0 10px!important}.sec-head h2{margin:0 4px!important}
-/* Paper surfaces (no glass, no glowing edge) */
-.card,.tcard,.notif{background:var(--paper)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:var(--paper-shadow)!important;color:var(--ink);border-radius:20px!important}
-.card::after,.tcard::after,.notif::after{content:none!important}
-.tcard{transform:none!important;transition:transform .18s var(--out)}
-.tcard:active,.row:active{transform:scale(.985)!important}
-.tlist{gap:10px!important}
-/* Email rows */
-.row{padding:12px 14px 12px 24px!important}
-.row:active{background:#f2f6fd!important}
-.row+.row::before{background:var(--hair)!important;left:66px!important;transform:none!important;height:1px}
-.av{width:36px!important;height:36px!important;background:#e4ecfb!important;color:#1f5fd6!important;box-shadow:none!important;font:600 15px/1 var(--body)!important}
-.from{font:600 14.5px/1.25 var(--body)!important;color:var(--ink)!important;letter-spacing:-.01em}
-.time{font-size:12px!important;color:var(--ink3)!important}
-.subj{font-size:13.5px!important;color:var(--ink2)!important;font-weight:500!important}
-.prev{font-size:13px!important;color:var(--ink3)!important;line-height:1.4}
-.row.read .from,.row.read .subj{color:var(--ink4)!important}.row.read .prev{color:#b4bbc9!important}.row.read .av{opacity:.55}
-.dot{left:9px!important;top:24px!important;width:8px!important;height:8px!important;background:var(--grad,#1f6fff)!important;box-shadow:none!important}
-.empty,.card .empty{color:var(--ink3)!important}
-.row.kv span{color:var(--ink2)}.row.kv b{color:var(--ink)!important;font-size:15px!important}
-.card .btn.ghost,.row .btn.ghost{background:#e4ecfb!important;color:#1f5fd6!important;box-shadow:none!important}
-.code-chip{background:#e4ecfb!important;box-shadow:none!important}.code-chip b{color:var(--ink)!important;font-size:19px!important}.code-chip small{color:#1f5fd6!important}
-.notif .from{color:var(--ink)!important}.notif .prev{color:var(--ink3)!important}
-/* Tracker cards: a little window of sky as the date, like the big card */
-.tcard{padding:12px 12px 12px 12px!important;gap:14px!important;align-items:center!important}
-.tdate{width:58px!important;min-height:64px!important;border-radius:14px!important;position:relative;overflow:hidden;justify-content:flex-start!important;padding-top:10px;background:var(--grad,linear-gradient(180deg,#1f6fff,#8fc6ff))!important;box-shadow:none!important;border:0!important}
-.tdate::after{content:'';position:absolute;left:0;right:0;bottom:0;height:20px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 58 20' preserveAspectRatio='none'%3E%3Cpath d='M0 20V12l9-6 7 5 10-9 9 8 6-4 9 7 8-4v11z' fill='%230d1a3a' fill-opacity='.55'/%3E%3Cpath d='M0 20v-4l12-5 9 4 11-7 10 6 8-3 8 4v5z' fill='%23ffffff' fill-opacity='.9'/%3E%3C/svg%3E") bottom/100% 100% no-repeat}
-.tdate b{font:650 21px/1 var(--head)!important;color:#fff!important;letter-spacing:-.03em!important;position:relative;z-index:1;text-shadow:0 1px 6px rgba(0,30,90,.25)}
-.tdate span{font:600 10.5px/1 var(--body)!important;color:rgba(255,255,255,.92)!important;letter-spacing:.06em!important;text-transform:uppercase;margin-top:3px;position:relative;z-index:1}
-.tcard.read .tdate{opacity:.55!important;filter:saturate(.6)}
-.tstatus{font-size:11.5px!important;color:var(--ink3)!important;letter-spacing:.01em}
-.tname{font:600 15px/1.25 var(--head)!important;color:var(--ink)!important;letter-spacing:-.02em!important;margin:2px 0 1px!important}
-.tsub{font-size:13px!important;color:var(--ink2)!important}
-.tmeta{font-size:12px!important;color:var(--ink3)!important;font-family:var(--mono)}
-.tcard.read .tname,.tcard.read .tsub{color:var(--ink4)!important}.tcard.read .tstatus,.tcard.read .tmeta{color:#b4bbc9!important}
-.tbody{min-width:0;padding-right:40px}
-.go{width:30px!important;height:30px!important;background:var(--ink)!important;color:#fff!important;font-size:16px!important;right:12px!important}
-.cal-chip{background:#e4ecfb!important;color:#1f5fd6!important;font-weight:600}
-.tl i{background:#dfe5ef!important;box-shadow:none!important}.tl i.on{background:var(--grad,#1f6fff)!important}
-.tl-lb{color:var(--ink4)!important}.tl-lb .now{color:var(--ink)!important}
-.recv{box-shadow:none!important}
-.ccard .tdate b{font-size:13px!important}.code-big{color:var(--ink)!important;font-size:21px!important}.ccard.read .code-big{color:var(--ink4)!important}
-/* Next up: slightly smaller title to match */
-.f-title{font-size:20px!important}
-/* Filters: quieter, smaller */
-.seg button{padding:9px 12px!important;font-size:13px!important;border-radius:12px!important}
-/* Ask: the PA's answers on paper too */
-.bub{font-size:14.5px!important}
-.bub.pa{background:var(--paper)!important;color:var(--ink)!important;border:0!important;box-shadow:var(--paper-shadow)}
-.bub.pa.err{color:#b3261e!important}
-.bub .src{background:#e4ecfb!important;color:#1f5fd6!important}
-.bub .meta{color:var(--ink4)!important}
-.sugg button{font-size:13.5px!important}
-/* Settings and the email reader keep their dark look */
+/* ===== v66 Premium dark: one calm system for the whole app. Black ground, quiet graphite cards (every email its own card),
+   one accent that only marks what you can act on, glass only where content scrolls beneath it (top bar, tab bar, filters, sheets). ===== */
+:root{--g0:#000;--g1:#0f0f11;--g2:#17171a;--g3:#222226;--g4:#2e2e33;--hair:rgba(255,255,255,.07);--hair2:rgba(255,255,255,.12);
+  --t1:#f4f4f6;--t2:#a7a7b0;--t3:#74747d;--t4:#4f4f57;--glass:rgba(22,22,25,.62);--blur:saturate(180%) blur(24px);
+  --ridge:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 60' preserveAspectRatio='none'%3E%3Cpath d='M0 46 L38 30 L64 38 L112 12 L150 34 L184 24 L228 44 L270 20 L312 36 L350 26 L400 40' fill='none' stroke='%23ffffff' stroke-opacity='.16' stroke-width='1'/%3E%3Cpath d='M0 54 L52 42 L96 50 L150 38 L206 52 L262 40 L318 50 L372 42 L400 48' fill='none' stroke='%23ffffff' stroke-opacity='.08' stroke-width='1'/%3E%3C/svg%3E");
+  --chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 6l6 6-6 6' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --check:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+html,body{background:var(--g0)!important;color:var(--t1);font-size:15px;font-family:var(--body);letter-spacing:-.005em}
+body::before,#app::before{content:none!important;display:none!important}
+::selection{background:color-mix(in srgb,var(--acc) 38%,transparent);color:#fff}
+input,textarea{caret-color:var(--acc)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px;border-radius:12px}
+.time,.tmeta,.row.kv b,.seg button b,.badge{font-variant-numeric:tabular-nums}
+h2{font:600 17px/1.2 var(--head)!important;letter-spacing:-.02em!important;color:var(--t1);margin:30px 4px 12px!important}
+.sec-head{margin:30px 0 12px!important}.sec-head h2{margin:0 4px!important}.sec-head .chev{color:var(--t3)}
+.hint,.empty,.card .empty{color:var(--t3)!important;font-size:13px!important}
+/* ---- Glass: top bar, tab bar ---- */
+.topbar{background:var(--glass)!important;backdrop-filter:var(--blur)!important;-webkit-backdrop-filter:var(--blur)!important;border-bottom:1px solid var(--hair)!important}
+.brand{font:600 16px/1 var(--head)!important;letter-spacing:-.02em;color:var(--t1)}
+.tb-date{color:var(--t3)!important;font-size:13px!important}
+.gear.me{background:var(--g3)!important;color:var(--t1)!important;box-shadow:inset 0 0 0 1px var(--hair2)!important;font:600 14px/1 var(--head)!important}
+.runbtn{background:var(--acc)!important;box-shadow:none!important;font:600 12.5px/1 var(--body)!important;padding:8px 13px 8px 11px!important}
+.runbtn.busy{background:var(--g3)!important;color:var(--t2)!important}
+.tabbar{background:var(--glass)!important;backdrop-filter:var(--blur)!important;-webkit-backdrop-filter:var(--blur)!important;border:1px solid var(--hair2)!important;box-shadow:0 18px 40px rgba(0,0,0,.55)!important}
+.tabbar::before{content:none!important}
+.tab{color:var(--t3)!important}
+.tab[aria-current=true]{color:#fff!important}
+.tab[aria-current=true]::after{background:var(--acc)!important;box-shadow:0 6px 16px rgba(0,0,0,.4)!important}
+.tab[aria-current=true] svg{filter:none!important}
+.badge{background:var(--acc)!important;box-shadow:0 0 0 2px var(--g1)!important}
+/* ---- Filters (glass chips) ---- */
+.seg button{background:rgba(255,255,255,.06)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:inset 0 0 0 1px var(--hair)!important;color:var(--t1)!important;border-radius:12px!important;padding:10px 12px!important;font:500 13px/1 var(--body)!important}
+.seg button b{color:var(--t3)!important;font:500 12px/1 var(--mono)!important}
+.seg button.zero{color:var(--t3)!important}.seg button.zero b{color:var(--t4)!important}
+.seg button[aria-pressed=true]{background:#f4f4f6!important;color:#0b0b0d!important;box-shadow:none!important}
+.seg button[aria-pressed=true] b{color:#55555c!important}
+/* ---- Surfaces ---- */
+.card,.tcard,.notif,.impbox,.set-row,.msg .att,.att{background:var(--g1)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:inset 0 0 0 1px var(--hair)!important;color:var(--t1)}
+.card::after,.tcard::after,.notif::after,.impbox::after,.set-row::after,.search::after{content:none!important}
+.card,.tcard,.notif,.impbox,.set-row{border-radius:20px!important}
+.tcard{transform:none!important;transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s}
+/* Every email is its own card */
+.card:has(> .row:not(.kv)){background:none!important;box-shadow:none!important;display:grid;gap:8px;overflow:visible!important;border-radius:0!important}
+.card:has(> .row:not(.kv)) > .row,.card:has(> .row:not(.kv)) > a.row{background:var(--g1)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;border-radius:18px!important}
+.row{padding:14px 16px!important;gap:12px!important;transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s!important}
+.row+.row::before{content:none!important}
+.row:active,.tcard:active{transform:scale(.985)!important;background:var(--g2)!important}
+.row:not(.read):not(.kv){background:var(--g2)!important}
+.av{width:38px!important;height:38px!important;border-radius:13px!important;background:var(--g3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;color:var(--t1)!important;font:600 14px/1 var(--head)!important;opacity:1!important}
+.row.read .av{color:var(--t3)!important}
+.from{font:600 14.5px/1.25 var(--body)!important;color:var(--t1)!important;letter-spacing:-.01em!important}
+.time{font:400 12px/1.25 var(--mono)!important;color:var(--t3)!important}
+.subj{font-size:13.5px!important;color:#d9d9de!important;font-weight:400!important;margin-top:3px!important}
+.prev{font-size:13px!important;color:var(--t3)!important;line-height:1.42!important}
+.row.read .from{color:var(--t2)!important}.row.read .subj{color:var(--t3)!important}.row.read .prev{color:var(--t4)!important}
+.dot{position:static!important;order:3;flex:none;align-self:flex-start;margin-top:5px;width:7px!important;height:7px!important;border-radius:50%;background:var(--acc)!important;box-shadow:none!important}
+.row .main{min-width:0;flex:1}
+.row.kv{padding:14px 18px!important}.row.kv+.row.kv{box-shadow:inset 0 1px 0 var(--hair)}
+.row.kv span{color:var(--t2)}.row.kv b{font:500 15px/1 var(--mono)!important;color:var(--t1)!important}
+.btn{background:var(--acc)!important;color:#fff!important;box-shadow:none!important;border-radius:999px!important;font:600 14px/1 var(--body)!important}
+.btn.ghost,.card .btn.ghost,.row .btn.ghost{background:var(--g3)!important;color:var(--t1)!important;box-shadow:inset 0 0 0 1px var(--hair)!important}
+.row .small-btn,.small-btn{padding:8px 13px!important;font-size:12.5px!important}
+.notif{padding:14px 16px!important}.notif .from{color:var(--t1)!important}.notif .prev{color:var(--t3)!important}
+.code-chip{background:var(--g3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;border-radius:12px!important}.code-chip b{color:var(--t1)!important;font:500 19px/1 var(--mono)!important;letter-spacing:.12em}.code-chip small{color:var(--t2)!important}
+/* ---- Next up: quiet, with an engraved ridge line (the app's mark) ---- */
+.feature{background:var(--g1)!important;color:var(--t1)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;border-radius:24px!important;padding:20px 20px 64px!important;min-height:0!important;margin-top:14px!important;transform:none!important}
+.feature::before{content:none!important}
+.feature::after{content:''!important;top:auto!important;bottom:0!important;left:0;right:0;height:56px!important;opacity:1!important;background:var(--ridge) bottom/100% 100% no-repeat!important;-webkit-mask-image:none!important;mask-image:none!important;animation:none!important}
+.f-date{border:0!important;border-image:none!important;padding-right:18px!important;box-shadow:inset -1px 0 0 var(--hair)}
+.f-date b{font:300 52px/.9 var(--head)!important;letter-spacing:-.05em!important;background:none!important;-webkit-text-fill-color:var(--t1)!important;color:var(--t1)!important}
+.f-date small{font:600 11px/1 var(--body)!important;letter-spacing:.08em;text-transform:uppercase;color:var(--acc)!important}
+.f-count{background:var(--g3)!important;color:var(--t2)!important;box-shadow:none!important;font:500 11.5px/1 var(--body)!important;padding:6px 9px!important;border-radius:999px!important}
+.f-title{font:600 19px/1.22 var(--head)!important;color:var(--t1)!important;letter-spacing:-.02em!important;margin:6px 0 6px!important}
+.f-when{color:var(--t2)!important;font-size:13.5px!important}.f-sub{color:var(--t3)!important;font-size:13px!important}
+.f-go{top:auto!important;bottom:16px!important;right:16px!important;width:36px!important;height:36px!important;background:var(--g3)!important;box-shadow:inset 0 0 0 1px var(--hair2)!important;font-size:0!important;color:transparent!important}
+.f-go::before,.go::before{content:'';width:16px;height:16px;background:var(--t1);-webkit-mask:var(--chev) center/contain no-repeat;mask:var(--chev) center/contain no-repeat}
+/* ---- Trackers ---- */
+.tlist{gap:8px!important}
+.tcard{padding:12px 14px 12px 12px!important;gap:14px!important;align-items:center!important}
+.tdate{width:56px!important;min-height:60px!important;border-radius:15px!important;background:var(--g2)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;border:0!important;justify-content:center!important;padding:0!important;filter:none!important}
+.tdate::after{content:none!important}
+.tdate b{font:400 22px/1 var(--head)!important;color:var(--t1)!important;letter-spacing:-.03em!important;text-shadow:none!important}
+.tdate span{font:600 10px/1 var(--body)!important;letter-spacing:.08em!important;text-transform:uppercase;color:var(--acc)!important;margin-top:4px}
+.tcard.read .tdate{opacity:.5!important}
+.tstatus{font-size:11.5px!important;color:var(--t3)!important;letter-spacing:0}
+.tname{font:600 15px/1.25 var(--head)!important;color:var(--t1)!important;letter-spacing:-.015em!important;margin:2px 0 2px!important}
+.tsub{font-size:13px!important;color:var(--t2)!important}
+.tmeta{font:400 12px/1.3 var(--mono)!important;color:var(--t3)!important}
+.tcard.read .tname,.tcard.read .tsub{color:var(--t3)!important}.tcard.read .tstatus,.tcard.read .tmeta{color:var(--t4)!important}
+.tbody{min-width:0;padding-right:44px!important}
+.go{width:30px!important;height:30px!important;border-radius:50%!important;background:var(--g3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;font-size:0!important;color:transparent!important;display:grid!important;place-items:center}
+.go::before{width:14px;height:14px;background:var(--t2)}
+.cal-chip{background:var(--g3)!important;color:var(--t2)!important;font-weight:500!important}
+.tl i{background:var(--g3)!important;box-shadow:none!important;height:3px!important}.tl i.on{background:var(--acc)!important}
+.tl-lb{color:var(--t4)!important}.tl-lb .now{color:var(--t1)!important}
+.recv{background:var(--g3)!important;color:var(--t1)!important;box-shadow:inset 0 0 0 1px var(--hair2)!important;font:500 12.5px/1 var(--body)!important}
+.recv::before{content:'';width:13px;height:13px;background:var(--acc);-webkit-mask:var(--check) center/contain no-repeat;mask:var(--check) center/contain no-repeat}
+.code-big{color:var(--t1)!important;font:500 21px/1.1 var(--mono)!important}.ccard.read .code-big{color:var(--t3)!important}
+.ccard .tdate b{font:500 13px/1 var(--mono)!important}.ccard .tdate span{font-size:9.5px!important;color:var(--t3)!important;letter-spacing:.02em!important}
+/* ---- Email reader, settings, sheets ---- */
+#reader{background:var(--g0)!important}
+.bar{background:var(--glass)!important;backdrop-filter:var(--blur)!important;-webkit-backdrop-filter:var(--blur)!important;border-bottom:1px solid var(--hair)!important}
+.bar .t{font:600 15px/1.2 var(--head)!important;color:var(--t1)!important}
+.bar button{color:var(--t1)!important;font:500 15px/1 var(--body)!important}
+.msg h3{font:600 20px/1.28 var(--head)!important;color:var(--t1)!important;letter-spacing:-.02em!important}
+.m-av{border-radius:13px!important;background:var(--g3)!important;box-shadow:inset 0 0 0 1px var(--hair)!important;color:var(--t1)}
+.m-who b{font-size:15px!important;color:var(--t1)}.m-who small{color:var(--t3)!important}
+.msg iframe{border-radius:16px!important;box-shadow:none!important}
+.msg pre{color:#dcdce1!important;font-size:15px!important}
+.att{border-radius:14px!important;color:var(--t1)!important;font:500 13.5px/1.2 var(--body)!important}
+.impbox h3{color:var(--t3)!important}.impbox .imp{border-top:1px solid var(--hair)!important}
+.set-list{padding:16px!important;gap:8px!important}
+.set-row{font:500 15px/1.2 var(--body)!important;color:var(--t1)!important;padding:15px 16px!important}
+.set-row .set-val{color:var(--t3)!important;font-size:14px!important}.set-val.ok{color:var(--t2)!important}
+.set-row .set-chev{font-size:0!important;width:14px;height:14px;background:var(--t3);-webkit-mask:var(--chev) center/contain no-repeat;mask:var(--chev) center/contain no-repeat}
+.about-name{font:600 22px/1.2 var(--head)!important;color:var(--t1)}
+.keybox input{background:var(--g1)!important;border:1px solid var(--hair2)!important;border-radius:14px!important}
+.modal-bg{background:rgba(0,0,0,.55)!important}
+.modal{background:rgba(26,26,29,.86)!important;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--hair2)!important;border-radius:26px!important}
+.modal h3{font:600 18px/1.25 var(--head)!important;letter-spacing:-.02em}
+.modal p{color:var(--t2)!important;font-size:14px!important}.modal .warn{color:#f0c674!important}
+.modal .mgo{background:var(--acc)!important}.modal .mno{background:var(--g3)!important}
+.undo,.toast{background:rgba(30,30,33,.82)!important;backdrop-filter:var(--blur)!important;-webkit-backdrop-filter:var(--blur)!important;border:1px solid var(--hair2)!important;box-shadow:0 14px 34px rgba(0,0,0,.5)!important;color:var(--t1)!important}
+.undo button{background:var(--t1)!important;color:#0b0b0d!important}.undo i{background:var(--acc)!important}
+/* ---- Ask: one question, one answer ---- */
+.ask{padding-top:4px}
+.ask-intro{margin:6px 4px 18px;color:var(--t2);font-size:14px;line-height:1.5;max-width:34ch}
+.ask-try{display:grid;gap:8px}
+.ask-try button{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;text-align:left;padding:14px 16px;border-radius:16px;background:var(--g1);box-shadow:inset 0 0 0 1px var(--hair);color:var(--t1);font:400 14px/1.35 var(--body);border:0;cursor:pointer;transition:transform .2s cubic-bezier(.2,.8,.2,1),background-color .2s}
+.ask-try button:active{transform:scale(.985);background:var(--g2)}
+.ask-try button::after{content:'';flex:none;width:14px;height:14px;background:var(--t3);-webkit-mask:var(--chev) center/contain no-repeat;mask:var(--chev) center/contain no-repeat}
+.ask-q{margin:8px 4px 16px;font:500 22px/1.28 var(--head);letter-spacing:-.025em;color:var(--t1);text-wrap:balance}
+.ask-a{position:relative;padding:18px 18px 20px;border-radius:22px;background:var(--g1);box-shadow:inset 0 0 0 1px var(--hair);font:400 15px/1.55 var(--body);color:#e4e4e8;white-space:pre-wrap;word-wrap:break-word;animation:askin .5s cubic-bezier(.16,1,.3,1) both}
+.ask-a b{color:var(--t1);font-weight:600}
+.ask-a.err{color:#ffb0a6}
+.ask-wait{display:flex;align-items:center;gap:12px;padding:18px;border-radius:22px;background:var(--g1);box-shadow:inset 0 0 0 1px var(--hair);color:var(--t2);font-size:13.5px}
+.ask-wait i{width:16px;height:16px;border-radius:50%;border:2px solid var(--g4);border-top-color:var(--acc);animation:spin .9s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes askin{from{opacity:0;transform:translateY(10px);filter:blur(4px)}}
+.ask-src{margin-top:10px;display:grid;gap:8px}
+.ask-src button{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border:0;border-radius:16px;background:var(--g1);box-shadow:inset 0 0 0 1px var(--hair);color:var(--t1);text-align:left;font:500 13.5px/1.3 var(--body);cursor:pointer}
+.ask-src button svg{flex:none;color:var(--t3)}
+.ask-src button span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ask-src button::after{content:'';flex:none;width:13px;height:13px;background:var(--t3);-webkit-mask:var(--chev) center/contain no-repeat;mask:var(--chev) center/contain no-repeat}
+.ask-meta{margin:12px 4px 0;color:var(--t4);font-size:11.5px}
+.ask-ridge{height:44px;margin:26px -4px 0;background:var(--ridge) center/100% 100% no-repeat;opacity:.9}
+.askbar{background:var(--glass)!important;backdrop-filter:var(--blur)!important;-webkit-backdrop-filter:var(--blur)!important;border:1px solid var(--hair2)!important;box-shadow:0 14px 34px rgba(0,0,0,.5)!important;margin-top:20px!important}
+.askbar input{font-size:15px!important}
+.askbar .mic{background:var(--g3)!important}.askbar .lang{border-color:var(--hair2)!important;color:var(--t2)!important}
+.askbar button[type=submit]{background:var(--acc)!important}
+.ask-links button{color:var(--t3)!important;font-size:12.5px!important}
 </style>
 </head>
 <body>
@@ -687,7 +780,7 @@ const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by 
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 65;                  // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 66;                 // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -1196,18 +1289,22 @@ function inboxTab(page, d, m, emails, trackers) {
 // ---------- Ask: Pocket PA answers questions about his email and calendar ----------
 function searchTab(page) {
   if (S.results) { page.append(resultsSection()); return; } // the plain email list ("Show emails")
-  page.append(el('h2', '', 'Ask your PA'));
-  const chat = el('div', 'chat'); chat.id = 'chat';
+  // One question, one answer: a new question clears the last one
+  page.append(el('h2', '', 'Ask'));
+  const box = el('div', 'ask'); box.id = 'chat';
   S.chat = S.chat || loadChat();
-  if (!S.chat.length) {
-    chat.append(el('p', 'hint', 'Ask anything about your email and calendar, in English or Afrikaans.'));
-    const sg = el('div', 'sugg');
-    ['What’s on my calendar this week?', 'When is my next bill due?', 'Did Takealot send me an invoice?', 'Wat is volgende op my kalender?'].forEach((q) => { const b = el('button', '', q); b.onclick = () => askPA(q); sg.append(b); });
-    chat.append(sg);
+  const q0 = S.chat.filter((m) => m.role === 'me').pop(), a0 = S.chat.filter((m) => m.role !== 'me').pop();
+  if (!q0) {
+    box.append(el('p', 'ask-intro', 'Ask about your email or calendar, in English or Afrikaans. I find the right email and answer in a line or two.'));
+    const tr = el('div', 'ask-try');
+    ['What’s on my calendar this week?', 'When is my next bill due?', 'Get me the aircon invoice', 'Wat is volgende op my kalender?'].forEach((q) => { const b = el('button', '', q); b.onclick = () => askPA(q); tr.append(b); });
+    box.append(tr, el('div', 'ask-ridge'));
+  } else {
+    box.append(el('p', 'ask-q', q0.text));
+    if (S.asking) { const w = el('div', 'ask-wait'); w.append(el('i'), el('span', '', S.asking)); box.append(w); }
+    else if (a0) box.append(...answerParts(a0));
   }
-  S.chat.forEach((m) => chat.append(bubble(m)));
-  if (S.asking) { const t = el('div', 'bub pa'); const d = el('span', 'dots'); d.append(el('i'), el('i'), el('i')); t.append(d, el('span', 'meta', S.asking)); chat.append(t); }
-  page.append(chat);
+  page.append(box);
   const form = el('form', 'askbar'); const inp = el('input'); inp.type = 'text'; inp.placeholder = 'Ask your PA…'; inp.enterKeyHint = 'send'; inp.autocomplete = 'off'; inp.setAttribute('aria-label', 'Ask your PA');
   const go = el('button'); go.type = 'submit'; go.setAttribute('aria-label', 'Send'); go.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>'; go.disabled = !!S.asking;
   form.append(inp);
@@ -1235,9 +1332,21 @@ function searchTab(page) {
   const links = el('div', 'ask-links');
   const sh = el('button', '', 'Show matching emails'); sh.onclick = () => { const q = inp.value.trim() || lastQuestion(); if (q) search(q); else toast('Type what to look for first'); };
   links.append(sh);
-  if (S.chat.length) { const cl = el('button', '', 'New chat'); cl.onclick = () => { S.chat = []; saveChat(); render(); }; links.append(cl); }
+  if (S.chat.length && !S.asking) { const cl = el('button', '', 'Clear'); cl.onclick = () => { S.chat = []; saveChat(); render(); }; links.append(cl); }
   page.append(links);
-  if (S.chat.length || S.asking) setTimeout(() => window.scrollTo(0, document.body.scrollHeight), 30);
+}
+function answerParts(m) {
+  const a = el('div', 'ask-a' + (m.err ? ' err' : ''));
+  if (m.err) a.textContent = m.text;
+  else { const esc = String(m.text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); a.innerHTML = esc.replace(/\s*\[\d+\]/g, '').replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>').replace(/^\s*[-*]\s+/gm, '• ').replace(/^#+\s*/gm, '').replace(/\n{3,}/g, '\n\n').trim(); }
+  const out = [a];
+  if (m.srcs && m.srcs.length) {
+    const s = el('div', 'ask-src');
+    m.srcs.forEach((x) => { const c = el('button'); c.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M4 7l8 6 8-6"/></svg>'; c.append(el('span', '', x.title || 'Email')); c.onclick = () => openThread(x.id, x.title); s.append(c); });
+    out.push(s);
+  }
+  if (m.model) out.push(el('p', 'ask-meta', 'Answered by ' + m.model.replace(/:free$/, '').split('/').pop() + (m.backup ? ' (backup, Google was busy)' : '')));
+  return out;
 }
 function loadChat() { try { const a = JSON.parse(localStorageGet('chat') || '[]'); return Array.isArray(a) ? a.slice(-20) : []; } catch (e) { return []; } }
 function saveChat() { localStorageSet('chat', JSON.stringify((S.chat || []).slice(-20))); }
@@ -1288,7 +1397,7 @@ const fmtHM = (d) => String(d.getHours()).padStart(2, '0') + ':' + String(d.getM
 async function askPA(q) {
   const key = await aiKey();
   if (!key) { modal('Your PA needs its key first', [['Add the free OpenRouter key in Settings › PA key. Claude can help you get one.']], 'Open Settings', openAiKey, 'Not now'); return; }
-  S.chat = S.chat || loadChat(); S.chat.push({ role: 'me', text: q }); saveChat();
+  S.chat = [{ role: 'me', text: q }]; saveChat(); window.scrollTo(0, 0); // one question at a time
   S.asking = 'Looking through your email and calendar…'; render();
   try {
     // 1) Find the emails that matter (the smart search), and read the best few
@@ -1479,7 +1588,7 @@ function trackerSection(list) {
       const lb = el('div', 'tl-lb'); ['Ordered', t.status === 'ready_for_collection' ? 'Ready to collect' : 'On its way', 'Delivered'].forEach((s, i) => lb.append(el('span', i === step ? 'now' : '', s)));
       mm.append(tl, lb);
       // Received: the parcel is here, so it leaves the trackers (the agent learns this at its next run)
-      const rc = el('span', 'recv', '✓ Received'); rc.setAttribute('role', 'button');
+      const rc = el('span', 'recv', 'Received'); rc.setAttribute('role', 'button');
       rc.onclick = async (e) => {
         e.stopPropagation(); const key = 'recv:' + (trackerThread(t) || t.title);
         S.feedback[key] = { verdict: 'received', thread_id: trackerThread(t) || '', from: t.from || '', title: t.title || '', at: new Date().toISOString(), processed: false };
