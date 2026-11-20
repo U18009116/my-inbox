@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#000000">
-<title>My Inbox</title>
+<title>Pocket PA</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -542,6 +542,28 @@ html[data-theme=graphite] .code-chip{background:rgba(156,163,175,.14);box-shadow
 .recv:active{transform:scale(.95)}
 .tcard.gone{transform:translateX(-110%)!important;opacity:0;transition:transform .25s var(--out),opacity .25s}
 html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none!important;transition:none!important}
+/* v58 Pocket PA: Run agent button, confirm pop-up, calendar */
+.runbtn{justify-self:end;display:inline-flex;align-items:center;gap:6px;border:0;cursor:pointer;color:#fff;font:600 13px/1 var(--body);padding:7px 12px 7px 10px;border-radius:999px;background:var(--grad,var(--acc))}
+.runbtn svg{width:12px;height:12px}
+.runbtn.busy{background:var(--fill);color:var(--sub);box-shadow:none}
+.runbtn.busy svg{animation:runspin 1.2s linear infinite}
+@keyframes runspin{to{transform:rotate(360deg)}}
+.modal-bg{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:flex-end;justify-content:center;padding:16px;padding-bottom:calc(16px + env(safe-area-inset-bottom));animation:mfade .2s ease}
+.modal{width:100%;max-width:420px;background:#17191f;border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:22px 20px 18px;color:#fff;animation:mup .28s var(--out,ease)}
+.modal h3{margin:0 0 8px;font:600 19px/1.25 var(--body)}
+.modal p{margin:0 0 10px;color:var(--sub);font-size:15px;line-height:1.45}
+.modal .warn{color:#ffd27a}
+.modal .mbtns{display:grid;gap:10px;margin-top:16px}
+.modal .mbtns button{width:100%;padding:14px;border-radius:999px;font:600 16px/1 var(--body);border:0;cursor:pointer}
+.modal .mgo{background:var(--grad,var(--acc));color:#fff}
+.modal .mno{background:var(--fill);color:#fff}
+@keyframes mfade{from{opacity:0}}
+@keyframes mup{from{transform:translateY(30px);opacity:0}}
+.keybox{display:grid;gap:12px;padding:4px 2px}
+.keybox p{color:var(--sub);margin:0;line-height:1.45}
+.keybox input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#101216;color:#fff;font:15px var(--mono,monospace)}
+.set-val.ok{color:var(--green)}
+.cal-chip{display:inline-block;margin-left:6px;font-size:11px;padding:2px 7px;border-radius:999px;background:var(--fill);color:var(--sub);vertical-align:1px}
 </style>
 </head>
 <body>
@@ -558,13 +580,17 @@ html.no-motion *,html.no-motion *::before,html.no-motion *::after{animation:none
 <script>
 // ---- Settings (no secrets here: a Google "client ID" is public by design) ----
 const CLIENT_ID = '177429821917-kcu5ejvtcvkhjt1cufv1imslthtv7mj2.apps.googleusercontent.com';
-const SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
+const BASE_SCOPES = 'https://www.googleapis.com/auth/gmail.modify https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
+const CAL_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly'; // only asked for once Herman taps "Connect Google Calendar"
+const scopes = () => BASE_SCOPES + (localStorageGet('cal') === '1' ? ' ' + CAL_SCOPE : '');
+const RUN_FILE = 'pocket-pa-run.json';         // "Run agent" taps; the alert helper in Herman's Google account starts the agent
+const RUN_KEY_FILE = 'pocket-pa-run-key.json'; // the agent's start key, pasted once in Settings
 const DATA_FILE = 'my-inbox-data.json';       // written by the 7am agent
 const FEEDBACK_FILE = 'my-inbox-feedback.json'; // written by this app, read by the 7am agent
 const DRIVE_FOLDER = 'Claude';                  // everything is kept in this Drive folder
 const PUSH_KEY = 'BJzkCJgm1pK0s4z7sPTYxgalXjPgwth5wuHhEkVTLGEi5wx7iXnaA7A8QWlRLFZSQNfgbMnYlfH8CoUYuiuOSRc'; // public half of the agent's notification key
 const PUSH_FILE = 'my-inbox-push.json';         // where the phone's notification address is saved (Claude folder in Drive)
-const APP_VERSION = 57;                          // shown at the bottom so Herman can see he has the newest copy
+const APP_VERSION = 58;                         // shown at the bottom so Herman can see he has the newest copy
 
 if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 if ('serviceWorker' in navigator) {
@@ -586,7 +612,7 @@ const REDIRECT = location.origin + location.pathname;
 function goSignIn(silent) {
   const state = Math.random().toString(36).slice(2);
   try { sessionStorage.setItem('mi_state', state); } catch (e) {}
-  const p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: SCOPES, include_granted_scopes: 'true', state });
+  const p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: REDIRECT, response_type: 'token', scope: scopes(), include_granted_scopes: 'true', state });
   if (silent) p.set('prompt', 'none');
   const hint = localStorageGet('hint'); if (hint) p.set('login_hint', hint);
   location.assign('https://accounts.google.com/o/oauth2/v2/auth?' + p.toString());
@@ -598,7 +624,7 @@ function readRedirect() {
   if (!h.has('access_token') && !h.has('error')) return null;
   history.replaceState(null, '', REDIRECT);
   let want = null; try { want = sessionStorage.getItem('mi_state'); sessionStorage.removeItem('mi_state'); } catch (e) {}
-  if (h.get('error') || (want && h.get('state') !== want)) return 'error';
+  if (h.get('error') || (want && h.get('state') !== want)) { if (localStorageGet('cal') === '1') localStorageSet('cal', ''); return 'error'; } // e.g. calendar declined: don't ask again on every sign-in
   S.token = h.get('access_token'); S.exp = Date.now() + (Number(h.get('expires_in') || 3600) - 60) * 1000;
   try { localStorage.setItem('mi_tok', JSON.stringify([S.token, S.exp])); } catch (e) {}
   localStorageSet('signedin', '1');
@@ -657,7 +683,7 @@ async function enablePush(btn) {
     let sub = await reg.pushManager.getSubscription();
     if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: fromB64url(localStorageGet('pushkey') || PUSH_KEY) });
     await saveJsonToDrive(PUSH_FILE, { subscription: sub.toJSON(), saved_at: new Date().toISOString() });
-    localStorageSet('push', '1'); toast('Notifications are on. Your 7am summary will come from My Inbox.', 4000); render();
+    localStorageSet('push', '1'); toast('Notifications are on. Your 7am summary will come from Pocket PA.', 4000); render();
   } catch (e) { if (btn) btn.disabled = false; toast('Couldn\'t turn on notifications: ' + e.message, 5000); }
 }
 // Fetch the newest summary, trackers, read/unread and drafts, then redraw where Herman is
@@ -672,9 +698,9 @@ async function refreshData() {
 function cachedFeedback() { try { return JSON.parse(localStorageGet('fb') || '{}'); } catch (e) { return {}; } }
 // True when the 7am run (05:00 UTC) has happened since this copy was saved
 function needsFresh(d) {
-  // Agent runs at 07:00, 13:00 and 17:00 SAST (05:00, 11:00, 15:00 UTC): find the latest one that has finished
-  const now = new Date(); const runs = [5, 11, 15].map((h) => { const r = new Date(now); r.setUTCHours(h, 20, 0, 0); return r; }).filter((r) => r <= now);
-  const run = runs.length ? runs[runs.length - 1] : (() => { const r = new Date(now); r.setUTCDate(r.getUTCDate() - 1); r.setUTCHours(15, 20, 0, 0); return r; })();
+  // Agent is ready by 07:00, 13:00 and 17:00 SAST (starts 04:35, 10:35, 14:35 UTC): find the latest one that has finished
+  const now = new Date(); const runs = [4, 10, 14].map((h) => { const r = new Date(now); r.setUTCHours(h, 58, 0, 0); return r; }).filter((r) => r <= now);
+  const run = runs.length ? runs[runs.length - 1] : (() => { const r = new Date(now); r.setUTCDate(r.getUTCDate() - 1); r.setUTCHours(14, 58, 0, 0); return r; })();
   return !d || !d.updated_at || Date.parse(d.updated_at) < run.getTime();
 }
 function loader(text) {
@@ -755,7 +781,7 @@ function decodeEntities(s) { const t = document.createElement('textarea'); t.inn
 function signInScreen(msg) {
   const app = $('app'); app.replaceChildren();
   const c = el('div', 'center'); const box = el('div');
-  box.append(el('div', '', '📬'), el('h1', '', 'My Inbox'), el('p', '', msg || 'Sign in with your Google account to see your important emails and open attachments instantly.'));
+  box.append(el('div', '', '📬'), el('h1', '', 'Pocket PA'), el('p', '', msg || 'Sign in with your Google account to see your important emails and open attachments instantly.'));
   const b = el('button', 'btn', 'Sign in with Google');
   b.onclick = () => goSignIn(false);
   box.append(b); c.append(box); app.append(c);
@@ -771,6 +797,78 @@ async function start() {
   // Notifications allowed but the phone's address never got saved (e.g. sign-in interrupted it): finish quietly now
   if ('PushManager' in window && 'Notification' in window && Notification.permission === 'granted' && localStorageGet('push') !== '1') enablePush(null);
   setTimeout(syncPushKey, 2500);
+  setTimeout(loadCal, 1500);
+}
+
+// ---------- Google Calendar: his own events show on the trackers (read only) ----------
+// Events the email agent added itself are already trackers, so they are skipped here.
+function cachedCal() { try { return JSON.parse(localStorageGet('cal_items') || 'null'); } catch (e) { return null; } }
+async function loadCal() {
+  if (localStorageGet('cal') !== '1' || !S.token || Date.now() >= S.exp) return;
+  try {
+    const from = new Date(new Date().toDateString()), to = new Date(from.getTime() + 60 * 864e5);
+    const q = new URLSearchParams({ timeMin: from.toISOString(), timeMax: to.toISOString(), singleEvents: 'true', orderBy: 'startTime', maxResults: '60' });
+    const r = await (await api('https://www.googleapis.com/calendar/v3/calendars/primary/events?' + q)).json();
+    const pad = (n) => String(n).padStart(2, '0');
+    const hm = (d) => pad(d.getHours()) + ':' + pad(d.getMinutes());
+    const ymd = (d) => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    S.cal = (r.items || []).filter((e) => e.status !== 'cancelled' && !/\[added by email-agent/.test(e.description || '') && !['workingLocation', 'outOfOffice', 'focusTime'].includes(e.eventType))
+      .map((e) => {
+        const allDay = !!(e.start && e.start.date), s = allDay ? new Date(e.start.date + 'T00:00') : new Date(e.start.dateTime), en = e.end && e.end.dateTime ? new Date(e.end.dateTime) : null;
+        return { id: 'cal-' + e.id, kind: 'meeting', cal: true, title: e.summary || '(no title)', from: 'Calendar', place: e.location || '', date: ymd(s), time: allDay ? '' : hm(s) + (en ? '-' + hm(en) : ''), status: '', cal_url: e.htmlLink || '' };
+      });
+    localStorageSet('cal_items', JSON.stringify(S.cal));
+    if (!$('reader').classList.contains('open')) { const y = window.scrollY; render(); window.scrollTo(0, y); }
+  } catch (e) {
+    if (/ 403| 401/.test(' ' + e.message)) { localStorageSet('cal', ''); toast('Google Calendar needs to be connected again (Settings).', 4000); }
+  }
+}
+function connectCal() { localStorageSet('cal', '1'); goSignIn(false); } // Google asks once to allow reading the calendar, then comes straight back
+
+// ---------- Run agent (uses extra Claude credits, so it always asks first) ----------
+function runBusy() { return Date.now() - Number(localStorageGet('runat') || 0) < 8 * 60e3; }
+function modal(title, lines, goText, onGo, noText) {
+  const bg = el('div', 'modal-bg'), m = el('div', 'modal'); m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true');
+  m.append(el('h3', '', title)); lines.forEach(([t, cls]) => m.append(el('p', cls || '', t)));
+  const bt = el('div', 'mbtns'); const close = () => bg.remove();
+  if (goText) { const g = el('button', 'mgo', goText); g.onclick = () => { close(); onGo(); }; bt.append(g); }
+  const n = el('button', 'mno', noText || 'Cancel'); n.onclick = close; bt.append(n);
+  bg.onclick = (e) => { if (e.target === bg) close(); };
+  m.append(bt); bg.append(m); document.body.append(bg);
+}
+async function askRun() {
+  if (runBusy()) { modal('The agent is already running', [['You tapped Run a few minutes ago. Your summary email and an alert will arrive when it is done.']], null, null, 'OK'); return; }
+  let hasKey = localStorageGet('runkey') === '1';
+  if (!hasKey) { try { hasKey = !!(await driveFind(RUN_KEY_FILE)); if (hasKey) localStorageSet('runkey', '1'); } catch (e) {} }
+  if (!hasKey) { modal('Run agent isn’t set up yet', [['Add the agent’s start key in Settings first. Claude can help you with that.']], 'Open Settings', openRunKey, 'Not now'); return; }
+  modal('Run the agent now?', [
+    ['This sorts your new email straight away, instead of waiting for 7, 1 or 5 o’clock.'],
+    ['Are you sure? This uses additional Claude credits (about the same as one scheduled run).', 'warn'],
+  ], 'Yes, run the agent', doRun, 'Cancel');
+}
+async function doRun() {
+  localStorageSet('runat', String(Date.now())); render();
+  try {
+    await saveJsonToDrive(RUN_FILE, { requested_at: new Date().toISOString(), from: 'Pocket PA' });
+    toast('Starting the agent. You’ll get an alert within a minute.', 4500);
+  } catch (e) { localStorageSet('runat', ''); render(); toast('Couldn’t start the agent: ' + e.message, 5000); }
+  setTimeout(() => { const y = window.scrollY; if (!$('reader').classList.contains('open')) { render(); window.scrollTo(0, y); } }, 8 * 60e3 + 500);
+}
+function openRunKey() { if (!$('reader').classList.contains('open')) openReader('Settings'); S.sub = 'runkey'; history.pushState({ r: 2 }, ''); runKeyPage(); }
+function runKeyPage() {
+  $('r-title').textContent = 'Run agent key';
+  const box = el('div', 'keybox');
+  box.append(el('p', '', 'This key lets the Run button start your email agent. It is saved in your own Google Drive (Claude folder) and only your alert helper reads it.'));
+  const inp = el('input'); inp.type = 'password'; inp.placeholder = 'Paste the key here (starts with sk-ant-oat01-)'; inp.autocomplete = 'off'; inp.spellcheck = false;
+  const btn = el('button', 'btn', 'Save key');
+  btn.onclick = async () => {
+    const k = inp.value.trim();
+    if (!/^sk-ant-oat01-[\w-]{20,}$/.test(k)) { toast('That doesn’t look like the agent key. It starts with sk-ant-oat01-', 4500); return; }
+    btn.disabled = true; btn.textContent = 'Saving…';
+    try { await saveJsonToDrive(RUN_KEY_FILE, { token: k, saved_at: new Date().toISOString() }); localStorageSet('runkey', '1'); inp.value = ''; toast('Key saved. The Run button is ready.', 3500); S.sub = null; settingsList(); }
+    catch (e) { btn.disabled = false; btn.textContent = 'Save key'; toast('Couldn’t save: ' + e.message, 5000); }
+  };
+  box.append(inp, btn); $('r-body').replaceChildren(box);
 }
 
 // Bottom tab bar: Inbox, Trackers, Search, Cleaned up
@@ -786,7 +884,7 @@ function render() {
   const app = $('app'); app.replaceChildren();
   const d = S.data || {}; const m = d.morning || {};
   const emails = Array.isArray(m.emails) ? m.emails : [];
-  const trackers = Array.isArray(d.trackers) ? d.trackers : (d.trackers && Array.isArray(d.trackers.items) ? d.trackers.items : []);
+  const trackers = (Array.isArray(d.trackers) ? d.trackers : (d.trackers && Array.isArray(d.trackers.items) ? d.trackers.items : [])).concat(localStorageGet('cal') === '1' ? (S.cal || cachedCal() || []) : []);
   S.tab = S.tab || localStorageGet('tab') || 'inbox';
   if (S.results && S.tab !== 'search') S.tab = 'search';
 
@@ -795,10 +893,13 @@ function render() {
   const unreadN = [...ids].filter(isUnread).length;
   const trUnread = openTrackers(trackers).filter((t) => { const tid = trackerThread(t); return tid && isUnread(tid); }).length + (S.codes || []).filter((c) => Date.now() - c.ts < 15 * 60e3).length;
   const top = el('header', 'topbar');
-  const pill = el('span', 'livepill' + (unreadN ? '' : ' quiet'), unreadN ? unreadN + ' unread' : 'All read');
+  // Run agent: starts the email agent now (asks first, because it uses extra Claude credits)
+  const busy = runBusy(); const pill = el('button', 'runbtn' + (busy ? ' busy' : ''));
+  pill.innerHTML = busy ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l13-7.5z"/></svg>';
+  pill.append(busy ? 'Running' : 'Run agent'); pill.setAttribute('aria-label', busy ? 'The agent is running' : 'Run the email agent now'); pill.onclick = askRun;
   const gear = el('button', 'gear' + (S.newer ? ' dot' : '')); gear.setAttribute('aria-label', 'Settings'); gear.textContent = 'H'; gear.classList.add('me'); gear.onclick = openSettings;
   const left = el('span', 'tb-left'); left.append(gear, el('span', 'tb-date', new Date().toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' })));
-  top.append(left, el('span', 'brand', 'My Inbox'), pill);
+  top.append(left, el('span', 'brand', 'Pocket PA'), pill);
   app.append(top);
 
   const page = el('main');
@@ -806,7 +907,7 @@ function render() {
   else if (S.tab === 'search') searchTab(page);
   else if (S.tab === 'clean') cleanTab(page, d, m);
   else inboxTab(page, d, m, emails, trackers);
-  const ver = el('p', 'muted small', 'My Inbox, version ' + APP_VERSION); ver.style.cssText = 'text-align:center;margin-top:28px';
+  const ver = el('p', 'muted small', 'Pocket PA, version ' + APP_VERSION); ver.style.cssText = 'text-align:center;margin-top:28px';
   page.append(ver); app.append(page);
 
   const nav = el('nav', 'tabbar'); nav.setAttribute('aria-label', 'Sections');
@@ -854,7 +955,7 @@ function inboxTab(page, d, m, emails, trackers) {
   // Ask once to turn on morning notifications from My Inbox
   if ('PushManager' in window && 'Notification' in window && !(Notification.permission === 'granted' && localStorageGet('push') === '1')) {
     const nb = el('div', 'card notif'); const tx = el('div', 'main');
-    tx.append(el('div', 'from', 'Morning notifications'), el('p', 'prev', Notification.permission === 'denied' ? 'Blocked in Chrome. Allow notifications for this site, then tap Turn on.' : 'Get your 7am summary as a notification from My Inbox.'));
+    tx.append(el('div', 'from', 'Morning notifications'), el('p', 'prev', Notification.permission === 'denied' ? 'Blocked in Chrome. Allow notifications for this site, then tap Turn on.' : 'Get your 7am summary as a notification from Pocket PA.'));
     const b = el('button', 'btn small-btn', 'Turn on'); b.onclick = () => enablePush(b);
     nb.append(tx, b); page.append(nb);
   }
@@ -876,6 +977,7 @@ function inboxTab(page, d, m, emails, trackers) {
     const sub = [nx.place, nx.from].filter(Boolean).join(', '); if (sub) f.append(el('span', 'f-sub', sub));
     f.append(el('span', 'f-go', '→'));
     const tid = trackerThread(nx); if (tid) f.onclick = () => (['ticket', 'booking'].includes(nx.kind) ? openTicket(tid, nx.title) : openThread(tid, nx.title));
+    else if (nx.cal_url) f.onclick = () => window.open(nx.cal_url, '_blank');
     page.append(f);
   }
 
@@ -1010,6 +1112,8 @@ function trackerSection(list) {
   const listEl = el('div', 'tlist');
   if (S.kind === 'all' || S.kind === 'code') codes.forEach((c) => listEl.append(codeCard(c)));
   const shown = S.kind === 'code' ? [] : open.filter((t) => S.kind === 'all' || groupOf(t.kind) === S.kind);
+  const dkey = (t) => (t.date && !isNaN(new Date(t.date)) ? t.date + ' ' + (t.time || '') : '9999'); // soonest first, undated last
+  shown.sort((a, b) => (dkey(a) < dkey(b) ? -1 : dkey(a) > dkey(b) ? 1 : 0));
   if (!shown.length && !((S.kind === 'all' || S.kind === 'code') && codes.length)) listEl.append(el('div', 'card empty', S.kind === 'code' ? 'No security codes in the last 24 hours. New ones show here and pop up as alerts.' : 'Nothing being tracked here.'));
   shown.forEach((t) => {
     const k = KINDS[t.kind] || KINDS.delivery;
@@ -1019,7 +1123,8 @@ function trackerSection(list) {
     else lead.append(el('b', '', k[0]));
     const mm = el('div', 'tbody');
     const st = String(t.status || '').replace(/_/g, ' ');
-    mm.append(el('span', 'tstatus', k[3] + (st ? ', ' + st : '')));
+    const stl = el('span', 'tstatus', (t.cal ? 'Event' : k[3]) + (st ? ', ' + st : '')); if (t.cal) stl.append(el('span', 'cal-chip', 'Calendar'));
+    mm.append(stl);
     mm.append(el('span', 'tname', t.title || k[3]));
     const sub = [t.from, t.place].filter(Boolean).join(', '); if (sub) mm.append(el('span', 'tsub', sub));
     const meta = [t.time, t.ref].filter(Boolean).join('   '); if (meta) mm.append(el('span', 'tmeta', meta));
@@ -1043,6 +1148,7 @@ function trackerSection(list) {
     }
     r.append(lead, mm, el('span', 'go', '›'));
     const tid = trackerThread(t); if (tid) r.onclick = () => (['ticket', 'booking'].includes(t.kind) ? openTicket(tid, t.title) : openThread(tid, t.title));
+    else if (t.cal_url) r.onclick = () => window.open(t.cal_url, '_blank'); // opens the event in Google Calendar
     listEl.append(r);
   });
   if (trOpen) sec.append(listEl); return sec;
@@ -1460,12 +1566,22 @@ function settingsList() {
     sw.append(s);
   });
   th.append(sw);
-  box.append(b, th, mo); $('r-body').replaceChildren(box);
+  // Google Calendar on the trackers
+  const calOn = localStorageGet('cal') === '1';
+  const ca = el('button', 'set-row'); ca.append(el('span', '', 'Google Calendar'), el('span', 'set-val' + (calOn ? ' ok' : ''), calOn ? 'Connected' : 'Connect'), el('span', 'set-chev', '›'));
+  ca.onclick = () => calOn
+    ? modal('Google Calendar is connected', [['Your calendar events for the next 60 days show on Trackers under Meetings, and in Next up.']], 'Disconnect', () => { localStorageSet('cal', ''); localStorageSet('cal_items', ''); S.cal = null; settingsList(); render(); }, 'Keep it')
+    : modal('Connect Google Calendar?', [['Your own calendar events will show on Trackers and in Next up. Pocket PA can only read the calendar, never change it.'], ['Google will ask you once to allow this.']], 'Connect', connectCal, 'Not now');
+  // Run agent key
+  const rk = el('button', 'set-row'); const hasK = localStorageGet('runkey') === '1';
+  rk.append(el('span', '', 'Run agent key'), el('span', 'set-val' + (hasK ? ' ok' : ''), hasK ? 'Saved' : 'Not set'), el('span', 'set-chev', '›'));
+  rk.onclick = openRunKey;
+  box.append(b, th, mo, ca, rk); $('r-body').replaceChildren(box);
 }
 function aboutPage() {
   $('r-title').textContent = 'About app';
   const box = el('div', 'about');
-  box.append(el('div', 'about-name', 'My Inbox'), el('div', 'about-ver', 'Version ' + APP_VERSION));
+  box.append(el('div', 'about-name', 'Pocket PA'), el('div', 'about-ver', 'Version ' + APP_VERSION));
   const note = el('p', 'about-note', S.newer ? 'Version ' + S.newer + ' is ready to install.' : 'Tap below to see if there is a newer version.');
   const btn = el('button', 'btn', S.newer ? 'Update to version ' + S.newer : 'Check for updates');
   btn.onclick = async () => {
@@ -1478,7 +1594,7 @@ function aboutPage() {
   };
   box.append(note, btn); $('r-body').replaceChildren(box);
 }
-window.addEventListener('popstate', () => { if (S.sub === 'about' && $('reader').classList.contains('open')) { S.sub = null; settingsList(); return; } if ($('pdf') && !S.directPdf) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
+window.addEventListener('popstate', () => { if (S.sub && $('reader').classList.contains('open')) { S.sub = null; settingsList(); return; } if ($('pdf') && !S.directPdf) { showThread._last && showThread(...showThread._last); history.pushState({ r: 1 }, ''); } else closeReader(); });
 
 // Files saved on this phone so tickets and PDFs open instantly next time (even without signal)
 function fileKey(msgId, name) { return 'https://my-inbox.local/att/' + msgId + '/' + encodeURIComponent(name || 'file'); }
